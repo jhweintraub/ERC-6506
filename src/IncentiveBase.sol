@@ -20,9 +20,10 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     uint public constant BASIS_POINTS = 1e18; //to be used for fee calculations
 
     mapping(address => mapping(address => bool)) public allowedClaimers;
-    mapping(bytes32 => incentive) public incentives;
-    mapping(address => uint) public nonces;
+    mapping(bytes32 => Incentive) public incentives;
     mapping(address => bool) public arbiters;
+
+    mapping(bytes32 => bool) public disputes;
 
     constructor(address _feeRecipient, address _verifier, uint _feeBP, uint _bondAmount, address _bondToken) {
         require(_feeRecipient != address(0), "Address cannot be zero");
@@ -38,6 +39,15 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     }
 
     /*///////////////////////////////////////////////////////////////
+                            Dispute Helpers
+    //////////////////////////////////////////////////////////////*/
+    modifier noActiveDispute(bytes32 incentiveId) {
+        require(!disputes[incentiveId], "Cannot proceed while dispute is being processed");
+        _;
+    }
+
+
+    /*///////////////////////////////////////////////////////////////
                             Claimer functions
     //////////////////////////////////////////////////////////////*/
     function modifyClaimer(address claimer, bool designation) external returns (bool) {
@@ -49,6 +59,14 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
         }
     }
 
+    modifier isAllowedClaimer(bytes32 incentiveId) {
+        Incentive memory incentive = incentives[incentiveId];
+
+        if (msg.sender != incentive.recipient) {
+            require(allowedClaimers[incentive.recipient][msg.sender], "Not allowed to claim on behalf of recipient");
+        }  
+        _;
+    }
     /*///////////////////////////////////////////////////////////////
                             Admin functions
     //////////////////////////////////////////////////////////////*/

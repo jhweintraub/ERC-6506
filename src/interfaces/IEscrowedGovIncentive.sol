@@ -2,7 +2,7 @@
 pragma solidity ^0.8.12;
 
 interface IEscrowedGovIncentive {
-    struct incentive {
+    struct Incentive {
       address incentiveToken;
       address incentivizer;
       address recipient;
@@ -11,7 +11,7 @@ interface IEscrowedGovIncentive {
       bytes32 direction; //the keccack256 of the vote direction
       uint96 deadline;
       uint96 timestamp;
-      uint64 nonce;
+      bool claimed;
   }
 
   event incentiveSent(address indexed incentivizer, address indexed token, uint256 indexed amount, address recipient, bytes data);
