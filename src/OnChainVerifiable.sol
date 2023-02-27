@@ -11,7 +11,9 @@ abstract contract OnChainVerifiable is TransparentIncentive, ReentrancyGuard {
 
     function verifyVote(bytes32 incentive, bytes calldata voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {
         IEscrowedGovIncentive.Incentive memory incentive = incentives[incentive];
-        
+
+
+        //TODO - Include more info into voteInfo that is necesarry like ABI-encoding the contract or the DAO
         (isVerifiable, proofData) = IVoteVerifier(verifier).verifyVote(incentive.recipient, incentive.direction, incentive.proposalId, voteInfo);
     }
 

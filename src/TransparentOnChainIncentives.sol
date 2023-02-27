@@ -4,9 +4,9 @@ pragma solidity ^0.8.13;
 import "./TransparentIncentive.sol";
 import "openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./lib/FixedPointMathLib.sol";
-import "./OnChainDispute.sol";
+import "./OnChainVerifiable.sol";
 
-contract TransparentOnChainIncentives is TransparentIncentive, OnChainDispute {
+contract TransparentOnChainIncentives is TransparentIncentive, OnChainVerifiable {
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
 
