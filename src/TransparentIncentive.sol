@@ -7,7 +7,7 @@ abstract contract TransparentIncentive is IncentiveBase {
     using SafeTransferLib for ERC20;
 
     //All transparent contracts can inherit this function. They would differ in the (re)claim functions.
-    function incentivize(bytes32 incentiveId, bytes calldata incentiveInfo) external payable {
+    function incentivize(bytes32 incentiveId, bytes calldata incentiveInfo) external virtual payable {
         (address incentiveToken,
         address recipient,
         uint amount,

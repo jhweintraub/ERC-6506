@@ -4,9 +4,8 @@ pragma solidity ^0.8.13;
 import "./TransparentIncentive.sol";
 import "openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./lib/FixedPointMathLib.sol";
-import "./OnChainVerifiable.sol";
 
-contract TransparentOnChainIncentives is TransparentIncentive, OnChainVerifiable {
+contract TransparentOnChainIncentives is TransparentIncentive, ReentrancyGuard {
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
 
@@ -52,5 +51,17 @@ contract TransparentOnChainIncentives is TransparentIncentive, OnChainVerifiable
         emit incentiveReclaimed(incentive.incentivizer, incentive.recipient, incentive.incentiveToken, incentive.amount, reveal);
     }
 
+    //TODO: Reentrancy Guard all the functions
+    //Dispute Mechanism
+    function beginDispute(bytes32 incentiveId, bytes calldata disputeInfo) external override payable {
+        //Since info is already public we can just use the normal begin process
+        this.beginPublicDispute(incentiveId);
+    }
+
+    //TODO: Reentrancy Guard all the functions
+    function resolveDispute(bytes32 incentiveId, bytes calldata disputeResolutionInfo) external override returns (bool isDismissed) {
+        //Resolve with inherited on chain mechanism
+        return super.resolveOnChainDispute(incentiveId, disputeResolutionInfo);
+    }
 
 }

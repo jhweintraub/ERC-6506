@@ -6,6 +6,7 @@ import "./interfaces/IVoteVerifier.sol";
 import "./lib/ERC20.sol";
 import "./lib/SafeTransferLib.sol";
 
+import "openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "openzeppelin/contracts/access/Ownable.sol";
 
 abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
@@ -24,6 +25,8 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     mapping(address => bool) public arbiters;
 
     mapping(bytes32 => bool) public disputes;
+     mapping(bytes32 => bytes32) public disputeMerklesRoots;
+    mapping(bytes32 => uint64) public disputeCallbackTimes;
 
     constructor(address _feeRecipient, address _verifier, uint _feeBP, uint _bondAmount, address _bondToken) {
         require(_feeRecipient != address(0), "Address cannot be zero");
@@ -41,11 +44,80 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     /*///////////////////////////////////////////////////////////////
                             Dispute Helpers
     //////////////////////////////////////////////////////////////*/
+    function verifyVote(bytes32 incentive, bytes calldata voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {
+        IEscrowedGovIncentive.Incentive memory incentive = incentives[incentive];
+
+
+        //TODO - Include more info into voteInfo that is necesarry like ABI-encoding the contract or the DAO
+        (isVerifiable, proofData) = IVoteVerifier(verifier).verifyVote(incentive, voteInfo);
+    }
+
+    //Dispute Mechanism
+    //KEY POINT: Even if it's a private incentive it doesn't get revealed until the callback
+    function beginPublicDispute(bytes32 incentiveId) external virtual payable {
+        Incentive memory incentive = incentives[incentiveId];
+
+        require(!disputes[incentiveId], "a dispute has already been initiated");
+        require(incentive.deadline <= block.timestamp, "not enough time has passed yet to file a dispute");
+
+        //Necesarry to prevent spam dispute filings
+        require(msg.sender == incentive.incentivizer, "only the incentivizer can file a dispute over the incentive");
+
+        //Transfer Bond to this
+        ERC20(bondToken).safeTransferFrom(msg.sender, address(this), bondAmount);
+        
+        emit disputeInitiated(incentiveId, msg.sender, incentive.recipient);
+    }
+
+    //Resolving off chain dispute = check against merkle tree
+    function resolveOffChainDispute(bytes32 incentiveId, bytes calldata disputeResolutionInfo) internal returns (bool isDismissed) {
+        Incentive memory incentive = incentives[incentiveId];
+        uint callbackTime = disputeCallbackTimes[incentiveId];
+
+        if (msg.sender == incentive.incentivizer) {
+            require(callbackTime != 0 && callbackTime <= (block.timestamp + 3 days), "window has not yet closed");
+
+
+            //retrieve the tokens
+        }
+
+        // (bytes[] calldata proof) = abi.decode(disputeResolutionInfo, (bytes32[]));
+        
+    }
+
+    function resolveOnChainDispute(bytes32 incentiveId, bytes calldata disputeResolutionInfo) internal virtual returns (bool isDismissed) {
+        require(arbiters[msg.sender], "not allowed to resolve a dispute");
+        require(disputes[incentiveId], "cannot resolve a dispute that has not been filed");
+
+        Incentive storage incentive = incentives[incentiveId];
+
+        (address winner) = abi.decode(disputeResolutionInfo, (address));
+        require(winner == incentive.incentivizer || winner == incentive.recipient, "cannot resolve a dispute for a non-involved party");
+        bool isDismissed = (winner == incentive.incentivizer);
+
+        //Mark as claimed to prevent re-entry
+        incentive.claimed = true;
+
+        //If the 
+        if (isDismissed) {
+            //Bond is kept by protocol and tokens given to the recipient
+            ERC20(bondToken).safeTransfer(feeRecipient, bondAmount);
+            ERC20(incentive.incentiveToken).safeTransfer(incentive.recipient, incentive.amount);
+        } 
+        else {
+            //Return the bond and the tokens to the incentivizer
+            ERC20(bondToken).safeTransfer(incentive.incentivizer, bondAmount);
+            ERC20(incentive.incentiveToken).safeTransfer(incentive.incentivizer, incentive.amount);
+        }
+
+        emit disputeResolved(incentiveId, incentive.incentivizer, incentive.recipient, isDismissed);
+    }
+
+    //I Think this is dead code
     modifier noActiveDispute(bytes32 incentiveId) {
         require(!disputes[incentiveId], "Cannot proceed while dispute is being processed");
         _;
     }
-
 
     /*///////////////////////////////////////////////////////////////
                             Claimer functions

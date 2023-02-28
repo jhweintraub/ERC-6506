@@ -5,8 +5,9 @@ import "./TransparentIncentive.sol";
 import "openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./lib/FixedPointMathLib.sol";
 import "./PrivateIncentive.sol";
+import "forge-std/console.sol";
 
-contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard {
+contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard  {
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
 
@@ -82,18 +83,17 @@ contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard {
         return incentive;
     }
 
-    function verifyVote(bytes32 incentive, bytes calldata voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {
-        Incentive memory incentive = incentives[incentive];
-        (isVerifiable, proofData) = IVoteVerifier(verifier).verifyVote(incentive.recipient, incentive.direction, incentive.proposalId, voteInfo);
-    }
-
-
+    //TODO: Reentrancy Guard all the functions
     //Dispute Mechanism
-    function beginDispute(bytes32 incentiveId, bytes calldata disputeInfo) external payable noActiveDispute(incentiveId) {
-      
+    function beginDispute(bytes32 incentiveId, bytes calldata disputeInfo) external override payable {
+        //Make sure the reveal matches, and if so then begin to file dispute
+        validateReveal(incentiveId, disputeInfo);
+
+        this.beginPublicDispute(incentiveId);
     }
 
-    function resolveDispute(bytes32 incentiveId, bytes calldata disputeResolutionInfo) external nonReentrant returns (bool isDismissed) {
-        
+    function resolveDispute(bytes32 incentiveId, bytes calldata disputeResolutionInfo) external override returns (bool isDismissed) {
+        return resolveOnChainDispute(incentiveId, disputeResolutionInfo);
     }
+
 }

@@ -12,7 +12,6 @@ abstract contract PrivateIncentive is IncentiveBase {
 
     constructor(address _feeRecipient, address _verifier, uint _feeBP, uint _bondAmount, address _bondToken) 
     IncentiveBase(_feeRecipient, _verifier, _feeBP, _bondAmount, _bondToken) {
-
         TEMPLATE = address(new SmartWallet(address(this)));
     }
 
