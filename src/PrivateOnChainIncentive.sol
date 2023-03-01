@@ -16,7 +16,7 @@ contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard  {
 
     }
 
-    function claimIncentive(bytes32 incentiveId, bytes calldata reveal, address payable recipient) external nonReentrant noActiveDispute(incentiveId) isAllowedClaimer(incentiveId) {
+    function claimIncentive(bytes32 incentiveId, bytes memory reveal, address payable recipient) external nonReentrant noActiveDispute(incentiveId) isAllowedClaimer(incentiveId) {
         Incentive memory incentive = validateReveal(incentiveId, reveal);
 
         //Reach out to vote oracle and verify that they did vote correctly
@@ -38,7 +38,7 @@ contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard  {
         emit incentiveClaimed(incentive.incentivizer, incentive.recipient, incentiveId, proofData);
     }
 
-    function reclaimIncentive(bytes32 incentiveId, bytes calldata reveal) noActiveDispute(incentiveId) external {
+    function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) noActiveDispute(incentiveId) external {
         Incentive memory incentive = validateReveal(incentiveId, reveal);
         
         // Incentive memory incentive = incentives[incentiveId];
@@ -53,10 +53,10 @@ contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard  {
         //Retrieve the incentive tokens and send back to the incentivizer
         retrieveTokens(incentive);
         ERC20(incentive.incentiveToken).safeTransfer(incentive.incentivizer, incentive.amount);
-        emit incentiveReclaimed(incentive.incentivizer, incentive.recipient, incentive.incentiveToken, incentive.amount, reveal);
+        emit incentiveReclaimed(incentive.incentivizer, incentive.recipient, incentive.incentiveToken, incentive.amount, proofData);
     }
 
-    function validateReveal(bytes32 incentiveId, bytes calldata reveal) internal returns (Incentive memory) {
+    function validateReveal(bytes32 incentiveId, bytes memory reveal) internal returns (Incentive memory) {
         (address incentiveToken,
         address recipient,
         address incentivizer,
@@ -79,20 +79,31 @@ contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard  {
         incentive.proposalId = proposalId;
         incentive.direction = direction;
         incentive.deadline = deadline;
+        incentive.recipient = recipient;
 
         return incentive;
     }
 
     //TODO: Reentrancy Guard all the functions
     //Dispute Mechanism
-    function beginDispute(bytes32 incentiveId, bytes calldata disputeInfo) external override payable {
+    function beginDispute(bytes32 incentiveId, bytes memory disputeInfo) external override payable {
         //Make sure the reveal matches, and if so then begin to file dispute
         validateReveal(incentiveId, disputeInfo);
 
         this.beginPublicDispute(incentiveId);
     }
 
-    function resolveDispute(bytes32 incentiveId, bytes calldata disputeResolutionInfo) external override returns (bool isDismissed) {
+    function verifyVote(bytes32 _incentive, bytes memory voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {
+        IEscrowedGovIncentive.Incentive memory incentive = incentives[_incentive];
+
+        //TODO: Verify a real thing
+    }
+
+    function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns (bool isDismissed) {
+        //Just let the fucking arbiters handle it not like this dispute would ever get filed anyways
+        Incentive memory incentive = incentives[incentiveId];
+        retrieveTokens(incentive);//need to get the tokens from the smart wallet before we finish the dispute and send it off
+
         return resolveOnChainDispute(incentiveId, disputeResolutionInfo);
     }
 

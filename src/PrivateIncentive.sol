@@ -16,7 +16,7 @@ abstract contract PrivateIncentive is IncentiveBase {
     }
 
     //All private contracts can inherit this function. They would differ in the (re)claim functions.
-    function incentivize(bytes32 incentiveId, bytes calldata incentiveInfo) external virtual payable {
+    function incentivize(bytes32 incentiveId, bytes memory incentiveInfo) external virtual payable {
         //Make sure the committment is the same as the data they provided.
         require(incentives[incentiveId].timestamp == 0, "incentive already exists");
 

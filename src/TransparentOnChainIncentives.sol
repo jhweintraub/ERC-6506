@@ -14,7 +14,7 @@ contract TransparentOnChainIncentives is TransparentIncentive, ReentrancyGuard {
 
     }
 
-    function claimIncentive(bytes32 incentiveId, bytes calldata reveal, address payable recipient) external nonReentrant noActiveDispute(incentiveId) isAllowedClaimer(incentiveId) {
+    function claimIncentive(bytes32 incentiveId, bytes memory reveal, address payable recipient) external nonReentrant noActiveDispute(incentiveId) isAllowedClaimer(incentiveId) {
         Incentive memory incentive = incentives[incentiveId];
         require(!incentive.claimed, "Incentive has already been reclaimed");
 
@@ -36,7 +36,7 @@ contract TransparentOnChainIncentives is TransparentIncentive, ReentrancyGuard {
         emit incentiveClaimed(incentive.incentivizer, incentive.recipient, incentiveId, proofData);
     }
 
-    function reclaimIncentive(bytes32 incentiveId, bytes calldata reveal) noActiveDispute(incentiveId) external {
+    function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) noActiveDispute(incentiveId) external {
         Incentive memory incentive = incentives[incentiveId];
         require(!incentive.claimed, "Incentive has already been reclaimed");
         
@@ -51,16 +51,23 @@ contract TransparentOnChainIncentives is TransparentIncentive, ReentrancyGuard {
         emit incentiveReclaimed(incentive.incentivizer, incentive.recipient, incentive.incentiveToken, incentive.amount, reveal);
     }
 
+    function verifyVote(bytes32 _incentive, bytes memory voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {
+        //TODO: Check the chain based on the thing
+
+        //TODO: A real thing
+        return (true, "");
+    }
+
     //TODO: Reentrancy Guard all the functions
     //Dispute Mechanism
-    function beginDispute(bytes32 incentiveId, bytes calldata disputeInfo) external override payable {
+    function beginDispute(bytes32 incentiveId, bytes memory) external override payable {
         //Since info is already public we can just use the normal begin process
         this.beginPublicDispute(incentiveId);
     }
 
     //TODO: Reentrancy Guard all the functions
-    function resolveDispute(bytes32 incentiveId, bytes calldata disputeResolutionInfo) external override returns (bool isDismissed) {
-        //Resolve with inherited on chain mechanism
+    function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns (bool isDismissed) {
+        //Just let the fucking arbiters handle it not like a dispute here would ever get filed anyways
         return super.resolveOnChainDispute(incentiveId, disputeResolutionInfo);
     }
 

@@ -8,6 +8,7 @@ import "./lib/SafeTransferLib.sol";
 
 import "openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "openzeppelin/contracts/access/Ownable.sol";
+import "openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     using SafeTransferLib for ERC20;
@@ -25,8 +26,9 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     mapping(address => bool) public arbiters;
 
     mapping(bytes32 => bool) public disputes;
-     mapping(bytes32 => bytes32) public disputeMerklesRoots;
+    mapping(bytes32 => bytes32) public disputeMerklesRoots;
     mapping(bytes32 => uint64) public disputeCallbackTimes;
+
 
     constructor(address _feeRecipient, address _verifier, uint _feeBP, uint _bondAmount, address _bondToken) {
         require(_feeRecipient != address(0), "Address cannot be zero");
@@ -44,13 +46,7 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     /*///////////////////////////////////////////////////////////////
                             Dispute Helpers
     //////////////////////////////////////////////////////////////*/
-    function verifyVote(bytes32 incentive, bytes calldata voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {
-        IEscrowedGovIncentive.Incentive memory incentive = incentives[incentive];
 
-
-        //TODO - Include more info into voteInfo that is necesarry like ABI-encoding the contract or the DAO
-        (isVerifiable, proofData) = IVoteVerifier(verifier).verifyVote(incentive, voteInfo);
-    }
 
     //Dispute Mechanism
     //KEY POINT: Even if it's a private incentive it doesn't get revealed until the callback
@@ -70,22 +66,55 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     }
 
     //Resolving off chain dispute = check against merkle tree
-    function resolveOffChainDispute(bytes32 incentiveId, bytes calldata disputeResolutionInfo) internal returns (bool isDismissed) {
-        Incentive memory incentive = incentives[incentiveId];
+    function resolveOffChainDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) internal returns (bool isDismissed) {
+        Incentive storage incentive = incentives[incentiveId];
         uint callbackTime = disputeCallbackTimes[incentiveId];
 
+        require(!incentive.claimed, "incentive has already been claimed");
+        require(callbackTime != 0, "callback has not yet occured");
+
         if (msg.sender == incentive.incentivizer) {
-            require(callbackTime != 0 && callbackTime <= (block.timestamp + 3 days), "window has not yet closed");
+            //check that the window for the recipient has closed
+            require(block.timestamp >= (callbackTime + 3 days), "window has not yet closed");
+            //You don't need to check the status since the incentive.claimed value will handle it
 
+            incentive.claimed = true;
 
-            //retrieve the tokens
+            //Give them the bond
+            ERC20(bondToken).safeTransfer(incentive.incentivizer, bondAmount);
+            ERC20(incentive.incentiveToken).safeTransfer(incentive.incentivizer, incentive.amount);
+
+            emit disputeResolved(incentiveId, msg.sender, incentive.recipient, true);
+            isDismissed = true;
         }
 
-        // (bytes[] calldata proof) = abi.decode(disputeResolutionInfo, (bytes32[]));
+        //If it's the recipient
+        else if (msg.sender == incentive.recipient || allowedClaimers[incentive.recipient][msg.sender]) {
+            //check that the window has not yet closed to show proof
+            require(block.timestamp <= (callbackTime + 3 days), "your window has closed");
+            (bytes32[] memory merkleProof) = abi.decode(disputeResolutionInfo, (bytes32[]));
+
+            //Verify that they are in the merkle tree of voters
+            require(MerkleProof.verify(merkleProof, disputeMerklesRoots[incentiveId], keccak256(abi.encode(incentive.recipient))));
         
+            incentive.claimed = true;
+            //Send them the tokens
+            ERC20(bondToken).safeTransfer(feeRecipient, bondAmount);
+            ERC20(incentive.incentiveToken).safeTransfer(incentive.recipient, incentive.amount);
+
+            emit disputeResolved(incentiveId, incentive.incentivizer, incentive.recipient, false);
+            isDismissed = false;
+        }
+
+        else {
+            revert("Cannot claim incentive you are not involved in");
+        }
+
+        //Tokens should already be retrieved by this point so it's ok to make the calls
+        //It's certainly not the most secure to get the tokens before verifying but it's the only way this system works
     }
 
-    function resolveOnChainDispute(bytes32 incentiveId, bytes calldata disputeResolutionInfo) internal virtual returns (bool isDismissed) {
+    function resolveOnChainDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) internal virtual returns (bool isDismissed) {
         require(arbiters[msg.sender], "not allowed to resolve a dispute");
         require(disputes[incentiveId], "cannot resolve a dispute that has not been filed");
 
@@ -93,7 +122,7 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
 
         (address winner) = abi.decode(disputeResolutionInfo, (address));
         require(winner == incentive.incentivizer || winner == incentive.recipient, "cannot resolve a dispute for a non-involved party");
-        bool isDismissed = (winner == incentive.incentivizer);
+        isDismissed = (winner == incentive.incentivizer);
 
         //Mark as claimed to prevent re-entry
         incentive.claimed = true;
@@ -111,6 +140,11 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
         }
 
         emit disputeResolved(incentiveId, incentive.incentivizer, incentive.recipient, isDismissed);
+    }
+
+    function setMerkleRoot(bytes32 incentiveId, bytes32 root) external onlyOwner {
+        disputeMerklesRoots[incentiveId] = root;
+        disputeCallbackTimes[incentiveId] = uint64(block.timestamp);
     }
 
     //I Think this is dead code

@@ -22,19 +22,19 @@ interface IEscrowedGovIncentive {
   event disputeResolved(bytes32 indexed incentive, address indexed plaintiff, address indexed defendant, bool dismissed);
 
   //Core mechanism
-  function incentivize(bytes32 incentiveId, bytes calldata incentiveInfo) external payable;
+  function incentivize(bytes32 incentiveId, bytes memory incentiveInfo) external payable;
 
-  function claimIncentive(bytes32 incentiveId, bytes calldata reveal, address payable recipient) external;
+  function claimIncentive(bytes32 incentiveId, bytes memory reveal, address payable recipient) external;
   
-  function reclaimIncentive(bytes32 incentiveId, bytes calldata reveal) external;
+  function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) external;
   
-  function verifyVote(bytes32 incentive, bytes calldata voteInfo) external view returns (bool isVerifiable, bytes memory proofData);
+  function verifyVote(bytes32 incentive, bytes memory voteInfo) external view returns (bool isVerifiable, bytes memory proofData);
 
   function modifyClaimer(address claimer, bool designation) external returns (bool);
 
   //Dispute Mechanism
-  function beginDispute(bytes32 incentiveId, bytes calldata disputeInfo) external payable;
+  function beginDispute(bytes32 incentiveId, bytes memory disputeInfo) external payable;
 
-  function resolveDispute(bytes32 incentiveId, bytes calldata disputeResolutionInfo) external returns (bool isDismissed);
+  function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external returns (bool isDismissed);
 
 }
