@@ -112,6 +112,7 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
 
         //Tokens should already be retrieved by this point so it's ok to make the calls
         //It's certainly not the most secure to get the tokens before verifying but it's the only way this system works
+        //nonReentrant should be fine. Maybe return later and try and fix
     }
 
     function resolveOnChainDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) internal virtual returns (bool isDismissed) {

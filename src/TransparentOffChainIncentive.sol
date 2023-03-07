@@ -62,21 +62,12 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
     //     string app;
     //     string metadata;
     // }
+        (bool verified, bytes memory proofData) = verifyVote(incentiveId, reveal);
+        require(verified, "Vote could not be verified");
 
         (uint64 timestamp, bytes32 proposal, uint32 choice, string memory reason,
         string memory metadata, bytes memory signature) = 
             abi.decode(reveal, (uint64, bytes32, uint32, string, string, bytes));
-
-        //Need to use the abi.encode to keccack256 a uint
-        require(keccak256(abi.encode(choice)) == incentive.direction, "vote does not match committment");
-        require(uint(proposal) == incentive.proposalId, "Voted proposal must match commitment");
-
-        SignatureVerifier.SingleChoiceVote memory vote = SignatureVerifier.SingleChoiceVote(
-            incentive.recipient, space, timestamp, proposal, choice, reason, app, metadata
-        );
-
-        //Verify the signature
-        require(SignatureVerifier(verifier).verifySingleChoiceSignature(vote, signature, incentive.recipient));
 
          //Mark as claimed to prevent Reentry Attacks
         incentives[incentiveId].claimed = true;
@@ -87,14 +78,25 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
     }
 
     function verifyVote(bytes32 _incentive, bytes memory voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {
-        IEscrowedGovIncentive.Incentive memory incentive = incentives[_incentive];
+        Incentive memory incentive = incentives[_incentive];
 
+        (uint64 timestamp, bytes32 proposal, uint32 choice, string memory reason,
+        string memory metadata, bytes memory signature) = 
+            abi.decode(voteInfo, (uint64, bytes32, uint32, string, string, bytes));
 
-        //TODO: return a real thing
-        return (true, "");
+        //Need to use the abi.encode to keccack256 a uint
+        require(keccak256(abi.encode(choice)) == incentive.direction, "vote does not match committment");
+        require(uint(proposal) == incentive.proposalId, "Voted proposal must match commitment");
+
+        SignatureVerifier.SingleChoiceVote memory vote = SignatureVerifier.SingleChoiceVote(
+            incentive.recipient, space, timestamp, proposal, choice, reason, app, metadata
+        );
+
+        //Verify the signature
+        return (SignatureVerifier(verifier).verifySingleChoiceSignature(vote, signature, incentive.recipient), signature);
     }
 
-        //TODO: Reentrancy Guard all the functions
+    //TODO: Reentrancy Guard all the functions
     //Dispute Mechanism
     function beginDispute(bytes32 incentiveId, bytes memory disputeInfo) external override payable {
         //Can just use inherited version since they would reclaim already if possible

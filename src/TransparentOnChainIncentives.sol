@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "./TransparentIncentive.sol";
 import "openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./lib/FixedPointMathLib.sol";
+import "./OnChainVoteVerifier.sol";
 
 contract TransparentOnChainIncentives is TransparentIncentive, ReentrancyGuard {
     using SafeTransferLib for ERC20;
@@ -52,10 +53,9 @@ contract TransparentOnChainIncentives is TransparentIncentive, ReentrancyGuard {
     }
 
     function verifyVote(bytes32 _incentive, bytes memory voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {
-        //TODO: Check the chain based on the thing
-
-        //TODO: A real thing
-        return (true, "");
+       
+        //Literally just reach out to the vote oracle.
+        return OnChainVoteVerifier(verifier).verifyVote(incentives[_incentive], voteInfo);
     }
 
     //TODO: Reentrancy Guard all the functions

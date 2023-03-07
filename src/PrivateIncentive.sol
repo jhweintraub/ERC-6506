@@ -32,6 +32,34 @@ abstract contract PrivateIncentive is IncentiveBase {
         emit incentiveSent(msg.sender, address(0), 0, address(0), incentiveInfo);
     }
 
+    function validateReveal(bytes32 incentiveId, bytes memory reveal) internal virtual returns (Incentive memory) {
+        (address incentiveToken,
+        address recipient,
+        address incentivizer,
+        uint amount,
+        uint256 proposalId,
+        bytes32 direction, //the keccack256 of the vote direction
+        uint96 deadline) = abi.decode(reveal, (address, address, address, uint, uint256, bytes32, uint96));
+
+        bytes32 revealHash = keccak256(reveal);
+        require(revealHash == incentiveId, "data provided does not match committment");
+
+        //Verify that they revealed the info for an already committed-to incentive.        
+        Incentive storage incentive = incentives[revealHash];
+        require(incentive.timestamp > 0, "no incentive exists for provided data");
+
+        //Store the revealed data in long-term storage
+        incentive.incentiveToken = incentiveToken;
+        incentive.amount = amount;
+        incentive.incentivizer = incentivizer;
+        incentive.proposalId = proposalId;
+        incentive.direction = direction;
+        incentive.deadline = deadline;
+        incentive.recipient = recipient;
+
+        return incentive;
+    }
+
     function retrieveTokens(Incentive memory incentive) internal virtual {
         //The salt is the keccak256 of all the previously hidden info
         bytes32 salt = keccak256(abi.encode(incentive.recipient, 

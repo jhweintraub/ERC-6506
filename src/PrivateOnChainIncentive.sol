@@ -5,6 +5,7 @@ import "./TransparentIncentive.sol";
 import "openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./lib/FixedPointMathLib.sol";
 import "./PrivateIncentive.sol";
+import "./OnChainVoteVerifier.sol";
 import "forge-std/console.sol";
 
 contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard  {
@@ -56,33 +57,6 @@ contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard  {
         emit incentiveReclaimed(incentive.incentivizer, incentive.recipient, incentive.incentiveToken, incentive.amount, proofData);
     }
 
-    function validateReveal(bytes32 incentiveId, bytes memory reveal) internal returns (Incentive memory) {
-        (address incentiveToken,
-        address recipient,
-        address incentivizer,
-        uint amount,
-        uint256 proposalId,
-        bytes32 direction, //the keccack256 of the vote direction
-        uint96 deadline) = abi.decode(reveal, (address, address, address, uint, uint256, bytes32, uint96));
-
-        bytes32 revealHash = keccak256(reveal);
-        require(revealHash == incentiveId, "data provided does not match committment");
-
-        //Verify that they revealed the info for an already committed-to incentive.        
-        Incentive storage incentive = incentives[revealHash];
-        require(incentive.timestamp > 0, "no incentive exists for provided data");
-
-        //Store the revealed data in long-term storage
-        incentive.incentiveToken = incentiveToken;
-        incentive.amount = amount;
-        incentive.incentivizer = incentivizer;
-        incentive.proposalId = proposalId;
-        incentive.direction = direction;
-        incentive.deadline = deadline;
-        incentive.recipient = recipient;
-
-        return incentive;
-    }
 
     //TODO: Reentrancy Guard all the functions
     //Dispute Mechanism
@@ -96,7 +70,8 @@ contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard  {
     function verifyVote(bytes32 _incentive, bytes memory voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {
         IEscrowedGovIncentive.Incentive memory incentive = incentives[_incentive];
 
-        //TODO: Verify a real thing
+        return OnChainVoteVerifier(verifier).verifyVote(incentive, voteInfo);
+        
     }
 
     function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns (bool isDismissed) {
