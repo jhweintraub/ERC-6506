@@ -64,7 +64,7 @@ contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard  {
         //Make sure the reveal matches, and if so then begin to file dispute
         validateReveal(incentiveId, disputeInfo);
 
-        this.beginPublicDispute(incentiveId);
+        // this.beginPublicDispute(incentiveId);
     }
 
     function verifyVote(bytes32 _incentive, bytes memory voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {

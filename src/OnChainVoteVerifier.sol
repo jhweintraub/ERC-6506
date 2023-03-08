@@ -20,14 +20,16 @@ contract OnChainVoteVerifier is IVoteVerifier {
         
         IGovernorCompatibilityBravo.Receipt memory receipt = votingContract.getReceipt(incentive.proposalId, incentive.recipient);
 
-        bytes32 direction = keccak256(abi.encodePacked(receipt.support));//get the direction hash
+        bytes32 direction = keccak256(abi.encode(receipt.support));//get the direction hash
 
-
+        console.log("receipt: ", receipt.support);
 
         //The hash is only really used over int to handle different voting systems counting votes with different types
         //This way if a governance system uses a uint,bool, string, bytes, etc. it can still be counted without needing to redefine the entire struct
         
         //Return if the vote found was the direction committed to, and the 
+        console.log("voted direction: ", uint(direction));
+        console.log("incentive direction: ", uint(incentive.direction));
         return (direction == incentive.direction, abi.encode(receipt));
 
     }

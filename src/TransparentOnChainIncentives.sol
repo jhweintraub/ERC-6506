@@ -6,6 +6,8 @@ import "openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./lib/FixedPointMathLib.sol";
 import "./OnChainVoteVerifier.sol";
 
+import "forge-std/console.sol";
+
 contract TransparentOnChainIncentives is TransparentIncentive, ReentrancyGuard {
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
@@ -62,12 +64,13 @@ contract TransparentOnChainIncentives is TransparentIncentive, ReentrancyGuard {
     //Dispute Mechanism
     function beginDispute(bytes32 incentiveId, bytes memory) external override payable {
         //Since info is already public we can just use the normal begin process
-        this.beginPublicDispute(incentiveId);
+        beginPublicDispute(incentiveId);
     }
 
     //TODO: Reentrancy Guard all the functions
     function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns (bool isDismissed) {
         //Just let the fucking arbiters handle it not like a dispute here would ever get filed anyways
+
         return super.resolveOnChainDispute(incentiveId, disputeResolutionInfo);
     }
 

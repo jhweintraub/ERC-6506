@@ -100,7 +100,7 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
     //Dispute Mechanism
     function beginDispute(bytes32 incentiveId, bytes memory disputeInfo) external override payable {
         //Can just use inherited version since they would reclaim already if possible
-        this.beginPublicDispute(incentiveId);
+        // this.beginPublicDispute(incentiveId);
     }
 
     function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns(bool isDismissed) {

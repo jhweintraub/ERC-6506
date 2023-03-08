@@ -119,7 +119,7 @@ contract PrivateOffChainIncentives is PrivateIncentive, ReentrancyGuard  {
         //Make sure the reveal matches, and if so then begin to file dispute
         validateReveal(incentiveId, disputeInfo);
 
-        this.beginPublicDispute(incentiveId);
+        // this.beginPublicDispute(incentiveId);
     }
 
     function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns(bool isDismissed) {

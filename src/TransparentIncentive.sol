@@ -7,7 +7,7 @@ abstract contract TransparentIncentive is IncentiveBase {
     using SafeTransferLib for ERC20;
 
     //All transparent contracts can inherit this function. They would differ in the (re)claim functions.
-    function incentivize(bytes32 incentiveId, bytes memory incentiveInfo) external virtual payable {
+    function incentivize(bytes32, bytes memory incentiveInfo) external virtual payable {
         (address incentiveToken,
         address recipient,
         uint amount,
@@ -15,16 +15,16 @@ abstract contract TransparentIncentive is IncentiveBase {
         bytes32 direction, //the keccack256 of the vote direction
         uint96 deadline) = abi.decode(incentiveInfo, (address, address, uint, uint256, bytes32, uint96));
 
-        //TODO: Error Messages
+        
+        //Resolves a DOS vector where you can commit to some other data than what you provided
+        bytes32 incentiveId = keccak256(incentiveInfo);
+
+        //TODO: Better Error Messages
         require(incentives[incentiveId].timestamp == 0, "Incentive already exists");
         require(recipient != address(0));
         require(incentiveToken != address(0));
         require(amount > 0);
         require(deadline > block.timestamp);
-
-        //Make sure the committment is the same as the data they provided.
-        bytes32 calculatedId = keccak256(incentiveInfo);
-        require(calculatedId == incentiveId, "committment does not match underlying data");
 
         //Transfer the tokens to this (consider supporting Permit2 Library);
         ERC20(incentiveToken).safeTransferFrom(msg.sender, address(this), amount);

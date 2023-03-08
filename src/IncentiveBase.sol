@@ -10,6 +10,8 @@ import "openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "openzeppelin/contracts/access/Ownable.sol";
 import "openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
+import "forge-std/console.sol";
+
 abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     using SafeTransferLib for ERC20;
 
@@ -41,6 +43,7 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
         feeBP = _feeBP;
         verifier = _verifier;
         bondAmount = _bondAmount;
+        bondToken = _bondToken;
     }
 
     /*///////////////////////////////////////////////////////////////
@@ -50,17 +53,24 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
 
     //Dispute Mechanism
     //KEY POINT: Even if it's a private incentive it doesn't get revealed until the callback
-    function beginPublicDispute(bytes32 incentiveId) external virtual payable {
+    function beginPublicDispute(bytes32 incentiveId) internal {
         Incentive memory incentive = incentives[incentiveId];
 
         require(!disputes[incentiveId], "a dispute has already been initiated");
         require(incentive.deadline <= block.timestamp, "not enough time has passed yet to file a dispute");
 
         //Necesarry to prevent spam dispute filings
+        console.log("msg sender: ", msg.sender);
+        console.log("incentivizer: ", incentive.incentivizer);
         require(msg.sender == incentive.incentivizer, "only the incentivizer can file a dispute over the incentive");
+       
 
         //Transfer Bond to this
+        console.log("bond token: ", bondToken);
+        console.log("bondAmount: ", bondAmount);
         ERC20(bondToken).safeTransferFrom(msg.sender, address(this), bondAmount);
+
+        disputes[incentiveId] = true;
         
         emit disputeInitiated(incentiveId, msg.sender, incentive.recipient);
     }
@@ -123,7 +133,7 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
 
         (address winner) = abi.decode(disputeResolutionInfo, (address));
         require(winner == incentive.incentivizer || winner == incentive.recipient, "cannot resolve a dispute for a non-involved party");
-        isDismissed = (winner == incentive.incentivizer);
+        isDismissed = !(winner == incentive.incentivizer);//it's dismissed if the winner is NOT the incentivizer
 
         //Mark as claimed to prevent re-entry
         incentive.claimed = true;
@@ -193,5 +203,9 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
 
     function changeBondToken(address _newBondToken) external onlyOwner {
         bondToken = _newBondToken;
+    }
+
+    function addArbiter(address _arbiter) external onlyOwner {
+        arbiters[_arbiter] = true;
     }
 }
