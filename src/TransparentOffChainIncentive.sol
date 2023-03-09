@@ -92,6 +92,17 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
             incentive.recipient, space, timestamp, proposal, choice, reason, app, metadata
         );
 
+        // console.logBytes(signature);
+        // console.log("recipient: ", incentive.recipient);
+        // console.log("space: ", space);
+        // console.log("timestamp: ", timestamp);
+        // console.logBytes32(proposal);
+        // console.log("choice: ", choice);
+        // console.log("reason: ", reason);
+        // console.log("app: ", app);
+        // console.log("metadata: ", metadata);
+        // console.log("space: ", space);
+
         //Verify the signature
         return (SignatureVerifier(verifier).verifySingleChoiceSignature(vote, signature, incentive.recipient), signature);
     }
@@ -99,8 +110,8 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
     //TODO: Reentrancy Guard all the functions
     //Dispute Mechanism
     function beginDispute(bytes32 incentiveId, bytes memory disputeInfo) external override payable {
-        //Can just use inherited version since they would reclaim already if possible
-        // this.beginPublicDispute(incentiveId);
+        //Can just use inherited version since they would have reclaimed already if possible
+        beginPublicDispute(incentiveId);
     }
 
     function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns(bool isDismissed) {

@@ -3,6 +3,8 @@ pragma solidity ^0.8.13;
 
 import "openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
+import "forge-std/console.sol";
+
 contract SignatureVerifier {
 
     struct EIP712Domain {
@@ -128,7 +130,7 @@ contract SignatureVerifier {
         ));
 
         (address signer,) = ECDSA.tryRecover(digest, signature);
-
+        console.log("signer: ", signer);
         return (signer == expectedSigner);
     }
 

@@ -82,6 +82,7 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
 
         require(!incentive.claimed, "incentive has already been claimed");
         require(callbackTime != 0, "callback has not yet occured");
+        require(disputes[incentiveId], "no dispute was filed for you to resolve");
 
         if (msg.sender == incentive.incentivizer) {
             //check that the window for the recipient has closed
@@ -153,7 +154,8 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
         emit disputeResolved(incentiveId, incentive.incentivizer, incentive.recipient, isDismissed);
     }
 
-    function setMerkleRoot(bytes32 incentiveId, bytes32 root) external onlyOwner {
+    function setMerkleRoot(bytes32 incentiveId, bytes32 root) external {
+        require(arbiters[msg.sender]);
         disputeMerklesRoots[incentiveId] = root;
         disputeCallbackTimes[incentiveId] = uint64(block.timestamp);
     }
