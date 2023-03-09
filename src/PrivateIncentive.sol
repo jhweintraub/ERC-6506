@@ -5,6 +5,8 @@ import "./IncentiveBase.sol";
 import "./SmartWallet.sol";
 import "openzeppelin/contracts/proxy/Clones.sol";
 
+import "forge-std/console.sol";
+
 abstract contract PrivateIncentive is IncentiveBase {
     using SafeTransferLib for ERC20;
 
@@ -17,7 +19,6 @@ abstract contract PrivateIncentive is IncentiveBase {
 
     //All private contracts can inherit this function. They would differ in the (re)claim functions.
     function incentivize(bytes32 incentiveId, bytes memory incentiveInfo) external virtual payable {
-        //Make sure the committment is the same as the data they provided.
         require(incentives[incentiveId].timestamp == 0, "incentive already exists");
 
         //Create the new incentive object with the limited available information
@@ -25,6 +26,7 @@ abstract contract PrivateIncentive is IncentiveBase {
         incentive.incentivizer = msg.sender;
         incentive.timestamp = uint96(block.timestamp); //this downcast is safe
 
+        console.log("incentivizer: ", incentive.incentivizer);
         //Place in storage 
         incentives[incentiveId] = incentive;
 
@@ -61,19 +63,23 @@ abstract contract PrivateIncentive is IncentiveBase {
     }
 
     function retrieveTokens(Incentive memory incentive) internal virtual {
+        (address wallet, bytes32 salt) = predictDeterministic(incentive);
+        require(wallet.code.length == 0, "Smart Wallet already exists"); //Make sure the address doesn't already exists so the create2Fails
+        //Create the wallet and send the tokens to this where they can be distributed
+        wallet = Clones.cloneDeterministic(TEMPLATE, salt);
+        SmartWallet(wallet).sendTokens(incentive.incentiveToken, incentive.amount);
+    }
+
+    function predictDeterministic(Incentive memory incentive) public view returns (address smartWallet, bytes32 salt){
         //The salt is the keccak256 of all the previously hidden info
-        bytes32 salt = keccak256(abi.encode(incentive.recipient, 
+        salt = keccak256(abi.encode(incentive.incentivizer,
+                                            incentive.recipient, 
                                             incentive.incentiveToken, 
                                             incentive.amount, 
                                             incentive.proposalId,
                                             incentive.direction));
 
-        address wallet = Clones.predictDeterministicAddress(TEMPLATE, salt);
-        require(wallet.code.length > 0, "Smart Wallet already exists"); //Make sure the address doesn't already exists so the create2Fails
-
-        //Create the wallet and send the tokens to this where they can be distributed
-        wallet = Clones.cloneDeterministic(TEMPLATE, salt);
-        SmartWallet(wallet).sendTokens(address(this), incentive.amount);
+        smartWallet = Clones.predictDeterministicAddress(TEMPLATE, salt);
     }
 
 }

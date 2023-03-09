@@ -8,7 +8,7 @@ import "./PrivateIncentive.sol";
 import "./OnChainVoteVerifier.sol";
 import "forge-std/console.sol";
 
-contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard  {
+contract PrivateOnChainIncentive is PrivateIncentive, ReentrancyGuard  {
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
 
@@ -64,7 +64,7 @@ contract PrivateOnChainIncentives is PrivateIncentive, ReentrancyGuard  {
         //Make sure the reveal matches, and if so then begin to file dispute
         validateReveal(incentiveId, disputeInfo);
 
-        // this.beginPublicDispute(incentiveId);
+        beginPublicDispute(incentiveId);
     }
 
     function verifyVote(bytes32 _incentive, bytes memory voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {

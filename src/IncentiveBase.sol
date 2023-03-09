@@ -24,7 +24,7 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     uint public constant BASIS_POINTS = 1e18; //to be used for fee calculations
 
     mapping(address => mapping(address => bool)) public allowedClaimers;
-    mapping(bytes32 => Incentive) public incentives;
+    mapping(bytes32 => Incentive) internal incentives;
     mapping(address => bool) public arbiters;
 
     mapping(bytes32 => bool) public disputes;
@@ -177,13 +177,24 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     }
 
     modifier isAllowedClaimer(bytes32 incentiveId) {
+        _;
+
         Incentive memory incentive = incentives[incentiveId];
 
         if (msg.sender != incentive.recipient) {
             require(allowedClaimers[incentive.recipient][msg.sender], "Not allowed to claim on behalf of recipient");
         }  
-        _;
     }
+
+    /*///////////////////////////////////////////////////////////////
+                            Helper View functions
+    //////////////////////////////////////////////////////////////*/
+
+    function getIncentive(bytes32 incentiveId) external view returns (Incentive memory) {
+        return incentives[incentiveId];
+    }
+
+
     /*///////////////////////////////////////////////////////////////
                             Admin functions
     //////////////////////////////////////////////////////////////*/

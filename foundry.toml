@@ -2,5 +2,9 @@
 src = 'src'
 out = 'out'
 libs = ['lib']
+eth-rpc-url = "https://eth-mainnet.alchemyapi.io/v2/zOVFUzSEld1v_MuTOqGPYkTYttwBUrmF"
+fuzz_runs = 256
+test = 'test/'
+cache_path = 'forge-cache'
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config

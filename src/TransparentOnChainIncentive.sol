@@ -55,7 +55,6 @@ contract TransparentOnChainIncentives is TransparentIncentive, ReentrancyGuard {
     }
 
     function verifyVote(bytes32 _incentive, bytes memory voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {
-       
         //Literally just reach out to the vote oracle.
         return OnChainVoteVerifier(verifier).verifyVote(incentives[_incentive], voteInfo);
     }
