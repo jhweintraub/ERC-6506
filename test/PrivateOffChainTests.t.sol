@@ -53,6 +53,8 @@ contract PrivateOffChainTests is Test {
     bytes32 MerkleRoot;
     bytes32[] voters;
 
+    bytes32 committmentVoteDirection = keccak256(abi.encode(uint32(0)));
+
     IEscrowedGovIncentive.Incentive incentive;
 
       struct SignatureInfo {
@@ -117,7 +119,7 @@ contract PrivateOffChainTests is Test {
             angel,
             amount, //100 USDC
             proposalId,
-            keccak256(abi.encodePacked(uint(1))),//1 = Yes
+            committmentVoteDirection,//1 = Yes
             block.timestamp + 1 weeks
         );
 
@@ -132,7 +134,7 @@ contract PrivateOffChainTests is Test {
         incentive.incentiveToken = address(USDC);
         incentive.amount = amount;
         incentive.proposalId = uint(proposalId);
-        incentive.direction = keccak256(abi.encodePacked(uint(1)));
+        incentive.direction = committmentVoteDirection;
         incentive.deadline = uint96(block.timestamp) + 1 weeks;
         incentive.timestamp = uint96(block.timestamp);
         //Theoretically we only need to check that a single value made it into storage
@@ -169,7 +171,7 @@ contract PrivateOffChainTests is Test {
             angel,
             amount, //100 USDC
             proposalId,
-            keccak256(abi.encodePacked(uint(1))),//1 = Yes
+            committmentVoteDirection,//1 = Yes
             block.timestamp + 1 weeks);
 
         startHoax(alice, alice);
@@ -214,7 +216,7 @@ contract PrivateOffChainTests is Test {
             angel,
             amount,
             proposalId,
-            1,
+            0,
             incentive.deadline,
             SignatureInfo(
                 1,
@@ -243,18 +245,18 @@ contract PrivateOffChainTests is Test {
         //Go back 1 week to the beginning of the claiming window
         rewind(1 weeks);
 
-                //This one has an incorrect timestamp so the signature won't match the data
+        //This one has an incorrect timestamp so the signature won't match the data
         bytes memory incorrectVoteInfo = abi.encode(
             address(USDC),
             alice,
             angel,
             amount,
             proposalId,
-            1,
+            0,
             incentive.deadline,
             SignatureInfo(
-                0,
-                timestamp,
+                1,
+                timestamp+1,
                 reason,
                 metadata,
                 signature
@@ -282,7 +284,7 @@ contract PrivateOffChainTests is Test {
             angel,
             amount, //100 USDC
             proposalId,
-            keccak256(abi.encodePacked(uint(1))),//1 = Yes
+            committmentVoteDirection,//1 = Yes
             incentive.timestamp + 1 weeks
         );
         
@@ -303,7 +305,7 @@ contract PrivateOffChainTests is Test {
             angel,
             amount, //100 USDC
             proposalId,
-            keccak256(abi.encodePacked(uint(1))),//1 = Yes
+            committmentVoteDirection,//1 = Yes
             incentive.timestamp + 1 weeks
         );
 
@@ -335,7 +337,7 @@ contract PrivateOffChainTests is Test {
             angel,
             amount, //100 USDC
             proposalId,
-            keccak256(abi.encodePacked(uint(1))),//1 = Yes
+            committmentVoteDirection,//1 = Yes
             incentive.timestamp + 1 weeks
         );
 
@@ -366,7 +368,7 @@ contract PrivateOffChainTests is Test {
             angel,
             amount, //100 USDC
             proposalId,
-            keccak256(abi.encodePacked(uint(1))),//1 = Yes
+            committmentVoteDirection,//1 = Yes
             incentive.timestamp + 1 weeks
         );
 

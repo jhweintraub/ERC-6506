@@ -107,7 +107,7 @@ contract TransparentOffChainTests is Test {
             alice,
             amount, //100 USDC
             proposalId,
-            keccak256(abi.encodePacked(uint(1))),//1 = Yes
+            keccak256(abi.encodePacked(uint(0))),//1 = Yes
             block.timestamp + 1 weeks
         );
 
@@ -129,7 +129,7 @@ contract TransparentOffChainTests is Test {
         assertEq(incentive.recipient, alice);
         assertEq(incentive.amount, amount);
         assertEq(incentive.proposalId, uint(proposalId));
-        assertEq(incentive.direction, keccak256(abi.encodePacked(uint(1))));
+        assertEq(incentive.direction, keccak256(abi.encodePacked(uint(0))));
         assertEq(incentive.deadline, block.timestamp + 1 weeks);
         assertEq(incentive.timestamp, uint96(block.timestamp));
         assertFalse(incentive.claimed);        
@@ -218,13 +218,15 @@ contract TransparentOffChainTests is Test {
         vm.expectRevert("Vote could not be verified");
         provider.reclaimIncentive(incentiveId, incorrectVoteInfo);
 
+        console.log("GOT HERE");
+
         //Cannot claim with invalid signature
         provider.reclaimIncentive(incentiveId, correctVoteInfo);
+
 
         assertEq(USDC.balanceOf(angel), preBal, "incentive not returned to angel");
         IEscrowedGovIncentive.Incentive memory incentive = provider.getIncentive(incentiveId);
         assert(incentive.claimed);
-
 
         vm.stopPrank();
 
