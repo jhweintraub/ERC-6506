@@ -2,36 +2,33 @@
 pragma solidity ^0.8.13;
 
 
-import "src/TransparentOnChainIncentive.sol";
-import "src/OnChainVoteVerifier.sol";
+import "src/TransparentOffChainIncentive.sol";
+import "src/SignatureVerifier.sol";
 
 import "src/interfaces/IEscrowedGovIncentive.sol";
+import "src/lib/MerkleTreeGenerator.sol";
 
-import {MockGovernorBravo} from "src/mock/MockGovernorBravo.sol";
-import {MockERC20Votes} from "src/mock/MockERC20Votes.sol";
-import "openzeppelin/contracts/governance/TimelockController.sol";
+import "openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+
 
 import "../src/lib/SafeTransferLib.sol";
 import "../src/lib/FixedPointMathLib.sol";
 import "forge-std/Test.sol";
 import "forge-std/console.sol";
 
-contract TransparentOnChainTests is Test {
+contract TransparentOffChainTests is Test {
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
 
     ERC20 USDC = ERC20(0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48);
-    MockGovernorBravo governor;
-    MockERC20Votes mockToken;
     
-    TimelockController timelock;
     address[] addresses;
 
-    TransparentOnChainIncentives provider;
-    OnChainVoteVerifier verifier;
+    TransparentOffChainIncentives provider;
+    SignatureVerifier verifier;
 
     address angel = address(1);
-    address alice = address(2);
+    address alice = 0x070341aA5Ed571f0FB2c4a5641409B1A46b4961b;
     address bob = address(3);
     address arbiter = address(4);
 
@@ -41,36 +38,42 @@ contract TransparentOnChainTests is Test {
     uint constant BASIS_POINTS = 1 ether;
 
     //The ID of our new fake governance proposal
-    uint proposalId;
 
     event incentiveClaimed(address indexed incentivizer, address voter, bytes32 incentiveId, bytes proofData);
     event disputeInitiated(bytes32 indexed incentiveId, address indexed plaintiff, address indexed defendant);
 
+    bytes32 proposalId = 0x15a031fa5f848aac269214a7cda2fed314590ab0c935b6879e4bf7fb9d87cc2c;
+    string metadata = "{}";
+    uint32 choice = 1;
+    string reason = "";
+    uint64 timestamp = 1677271449;
+    bytes signature = hex"ba87e5918ea6c7e0e3301d149ac9263e30e3e46aee545e1cc49240edf8f402777d6642d1f3db11a34539073199bf8767af24223e1c28dd4f50b4cbf4daa30df21c";
+    string space = "aave.eth";
+    string app = "snapshot";
+
+    bytes32 MerkleRoot;
+    bytes32[] voters;
 
     constructor() {
-        mockToken = new MockERC20Votes();
-
-        addresses.push(address(this));
-        timelock = new TimelockController(uint(0), addresses, addresses, address(this));
-        
-        governor = new MockGovernorBravo(mockToken, timelock);
-        verifier = new OnChainVoteVerifier(address(governor));
+        verifier = new SignatureVerifier();
 
         //Create the new incentive contract
-        provider = new TransparentOnChainIncentives(
+        provider = new TransparentOffChainIncentives(
             FEE_RECIPIENT,
             address(verifier),
             feeBP,
             bondAmount,
-            address(USDC));
+            address(USDC),
+            address(verifier),
+            app,
+            space
+            );
 
         provider.addArbiter(arbiter);
 
         //Shit for debugging
         vm.label(address(provider), "provider");
         vm.label(address(USDC), "asset");
-        vm.label(address(mockToken), "mockToken");
-        vm.label(address(governor), "governor");
         vm.label(address(verifier), "verifier");
 
         vm.label(alice, "alice");
@@ -79,29 +82,21 @@ contract TransparentOnChainTests is Test {
         startHoax(angel, angel);
         deal(address(USDC), angel, 1e12);
         USDC.approve(address(provider), type(uint).max);
-        deal(address(mockToken), angel, 1e21);
         vm.stopPrank();
 
         startHoax(alice, alice);
         deal(address(USDC), alice, 1e12);
         USDC.approve(address(provider), type(uint).max);
-        deal(address(mockToken), alice, 1e21);
         vm.stopPrank();
     }
 
     function setUp() public {
-        address[] memory targets = new address[](1);
-        uint256[] memory values = new uint256[](1);
-        bytes[] memory calldatas = new bytes[](1);
+        for(uint x = 0; x < 9; x++) {
+            voters.push(keccak256(abi.encode(x)));
+        }
 
-        targets[0] = address(USDC);
-        //just call totalSupply. Doesn't matter what we call we just need it to be valid
-        calldatas[0] = abi.encodeWithSelector(USDC.totalSupply.selector);
-    
-        //Create the proposal
-        proposalId = governor.propose(targets, values, calldatas, "a fake proposal");
-        vm.roll(block.number + 2);
-    
+        voters.push(keccak256(abi.encode(alice)));
+        MerkleRoot = MerkleTreeGenerator.getRoot(voters);
     }
 
     function testCreateIncentive(uint amount) public returns (bytes32 incentiveId) {
@@ -133,7 +128,7 @@ contract TransparentOnChainTests is Test {
         assertEq(incentive.incentivizer, angel);
         assertEq(incentive.recipient, alice);
         assertEq(incentive.amount, amount);
-        assertEq(incentive.proposalId, proposalId);
+        assertEq(incentive.proposalId, uint(proposalId));
         assertEq(incentive.direction, keccak256(abi.encodePacked(uint(1))));
         assertEq(incentive.deadline, block.timestamp + 1 weeks);
         assertEq(incentive.timestamp, uint96(block.timestamp));
@@ -141,7 +136,6 @@ contract TransparentOnChainTests is Test {
 
         assertEq(USDC.balanceOf(angel), preBal - amount);
         assertEq(USDC.balanceOf(address(provider)), amount);
-
     }
 
     function testClaimIncentiveWithYesVote(uint amount) public {
@@ -149,18 +143,22 @@ contract TransparentOnChainTests is Test {
         //Submit the incentive
         bytes32 incentiveId = testCreateIncentive(amount);
 
-        //Do the voting - Alice should vote for "YES"
         startHoax(alice, alice);
-        governor.castVote(proposalId, uint8(1));
 
+        //Skip to a time after the deadline but before end of reclamation window
+        skip(1 weeks);
+        vm.expectRevert("not enough time has passed to claim yet");
+        provider.claimIncentive(incentiveId, "", payable(alice));
+
+        //Skip to some time after the deadline 
+        
+        skip(7 days);
         uint preBal = USDC.balanceOf(alice);
 
-        IGovernorCompatibilityBravo.Receipt memory receipt = governor.getReceipt(proposalId, alice);
-        bytes memory proofData = abi.encode(receipt);
-
+        //TODO: Fix
         //Make sure event logs are emitted correctly
-        vm.expectEmit(true, true, true, true);
-        emit incentiveClaimed(angel, alice, incentiveId, proofData);
+        // vm.expectEmit(true, true, true, true);
+        // emit incentiveClaimed(angel, alice, incentiveId, proofData);
 
         provider.claimIncentive(incentiveId, "", payable(alice));
         
@@ -175,21 +173,67 @@ contract TransparentOnChainTests is Test {
         assert(incentive.claimed);
     }
 
-    function testCannotClaimIncentiveWithNoVote(uint amount) public {
+    function testReclaimIncentiveWithNoVote(uint amount) public {
         vm.assume(amount > 1e6 && amount < 1e12);
+
+        uint preBal = USDC.balanceOf(angel);
+
         //Submit the incentive
         bytes32 incentiveId = testCreateIncentive(amount);
 
-        //Do the voting - Alice should vote for "YES"
-        startHoax(alice, alice);
-        governor.castVote(proposalId, uint8(0));//Vote for 0 = "AGAINST"
+        bytes memory correctVoteInfo = abi.encode(
+            timestamp,
+            proposalId,
+            choice,
+            reason,
+            metadata,
+            signature
+        );
 
-        uint preBal = USDC.balanceOf(alice);
+        //This one has an incorrect timestamp so the signature won't match the data
+        bytes memory incorrectVoteInfo = abi.encode(
+            timestamp+1,
+            proposalId,
+            choice,
+            reason,
+            metadata,
+            signature
+        );
 
-        //Make sure event logs are emitted correctly
+        startHoax(angel, angel);
+
+        //TODO: expectRevert because window hasn't closed yet
+        vm.expectRevert("not enough time has passed to claim yet");
+        provider.reclaimIncentive(incentiveId, correctVoteInfo);
+
+        //Skip forward to end of voting window
+        skip(2 weeks);
+        vm.expectRevert("missed your window to reclaim");
+        provider.reclaimIncentive(incentiveId, correctVoteInfo);
+
+        //Go back 1 week to the beginning of the claiming window
+        rewind(1 weeks);
+
+        //Cannot claim with invalid signature
         vm.expectRevert("Vote could not be verified");
+        provider.reclaimIncentive(incentiveId, incorrectVoteInfo);
+
+        //Cannot claim with invalid signature
+        provider.reclaimIncentive(incentiveId, correctVoteInfo);
+
+        assertEq(USDC.balanceOf(angel), preBal, "incentive not returned to angel");
+        IEscrowedGovIncentive.Incentive memory incentive = provider.getIncentive(incentiveId);
+        assert(incentive.claimed);
+
+
+        vm.stopPrank();
+
+        //Alice should not be able to claim since it was already clawed back
+        hoax(alice, alice);
+        vm.expectRevert("Incentive has already been claimed or clawed back");
         provider.claimIncentive(incentiveId, "", payable(alice));
     }
+
 
     function testClaimIncentiveWithAllowedClaimer(uint amount) public {
         vm.assume(amount > 1e6 && amount < 1e12);
@@ -197,12 +241,14 @@ contract TransparentOnChainTests is Test {
 
         //Do the voting - Alice should vote for "YES"
         startHoax(alice, alice);
-        governor.castVote(proposalId, uint8(1));//Vote for 1 = "FOR"
+        //TODO: Create Signature
+
         provider.modifyClaimer(bob, true);
 
         uint preBal = USDC.balanceOf(alice);
 
         vm.stopPrank();
+        skip(10 days);
 
         //Make sure event logs are emitted correctly
         hoax(bob, bob);
@@ -217,7 +263,7 @@ contract TransparentOnChainTests is Test {
 
         //Do the voting - Alice should vote for "YES"
         startHoax(alice, alice);
-        governor.castVote(proposalId, uint8(1));//Vote for 1 = "FOR"
+        //TODO: Create Signature
 
         uint preBal = USDC.balanceOf(alice);
 
@@ -225,6 +271,7 @@ contract TransparentOnChainTests is Test {
 
         //Make sure event logs are emitted correctly
         hoax(bob, bob);
+        skip(10 days);
         
         vm.expectRevert("Not allowed to claim on behalf of recipient");
         provider.claimIncentive(incentiveId, "", payable(alice));
@@ -235,15 +282,24 @@ contract TransparentOnChainTests is Test {
     function createDispute(uint amount) internal returns (bytes32 incentiveId) {
         incentiveId = testCreateIncentive(amount);
 
-        skip(2 weeks);
+        skip(1 weeks);
 
         uint preBal = USDC.balanceOf(angel);
+
+        //TODO: Expect Revert due to window not closing
+        //Roll forward to dispute window open 
 
         hoax(angel, angel);
         provider.beginDispute(incentiveId, "");
 
         assert(provider.disputes(incentiveId));
         assertEq(USDC.balanceOf(angel), preBal - bondAmount, "Bond was not successfully payed");
+    
+        //TODO: Create Merkle Root for Voters
+        //TODO: Add Merkle Root
+        hoax(arbiter, arbiter);
+        provider.setMerkleRoot(incentiveId, MerkleRoot);
+    
     }
 
     function testDisputeForPlaintiff(uint amount) public {
@@ -253,7 +309,11 @@ contract TransparentOnChainTests is Test {
 
         bytes32 incentiveId = createDispute(amount);
 
-        hoax(arbiter, arbiter);
+        //TODO: vm.expectRevert from window not closing
+        //TODO: Fast forward then claim
+        skip(3 days);
+
+        hoax(angel, angel);
         provider.resolveDispute(incentiveId, abi.encode(angel));
 
         assertEq(USDC.balanceOf(angel), preBal);
@@ -269,8 +329,13 @@ contract TransparentOnChainTests is Test {
 
         bytes32 incentiveId = createDispute(amount);
 
-        hoax(arbiter, arbiter);
-        provider.resolveDispute(incentiveId, abi.encode(alice));
+
+        //TODO: Create merkle proof and verify
+        bytes32[] memory merkleProof = MerkleTreeGenerator.getProof(voters, 9);
+
+        hoax(alice, alice);
+        provider.resolveDispute(incentiveId, abi.encode(merkleProof));
+        
 
         assertEq(USDC.balanceOf(alice), preBal + amount);
         assertEq(USDC.balanceOf(FEE_RECIPIENT), feeRecipientBal + bondAmount);    

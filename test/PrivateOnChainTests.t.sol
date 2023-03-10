@@ -84,7 +84,7 @@ contract PrivateOnChainTests is Test {
         vm.stopPrank();
 
         startHoax(alice, alice);
-        deal(address(USDC), angel, 1e12);
+        deal(address(USDC), alice, 1e12);
         USDC.approve(address(provider), type(uint).max);
         deal(address(mockToken), alice, 1e21);
         vm.stopPrank();
@@ -124,7 +124,6 @@ contract PrivateOnChainTests is Test {
         incentiveId = keccak256(incentiveData);
         
         //it literally doesn't matter what this data is since we already know the underlying committment value
-        uint randomData = uint(incentiveId) ^ 0xdeadbeef;
 
         uint preBal = USDC.balanceOf(angel);
 
@@ -141,7 +140,11 @@ contract PrivateOnChainTests is Test {
 
         startHoax(angel, angel);
         USDC.safeTransfer(wallet, amount);
-        provider.incentivize(incentiveId, abi.encode(randomData));
+        /*
+        It passes in nothing since it literally doesn't matter. A real implementation would
+        be encrypted data, but since we already know the data, empty bytes are fine.
+        */
+        provider.incentivize(incentiveId, "");
 
         IEscrowedGovIncentive.Incentive memory incentive = provider.getIncentive(incentiveId);
         //Theoretically we only need to check that a single value made it into storage
