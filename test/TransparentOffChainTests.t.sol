@@ -214,6 +214,7 @@ contract TransparentOffChainTests is Test {
         //Go back 1 week to the beginning of the claiming window
         rewind(1 weeks);
 
+        console.log("preparing to revert");
         //Cannot claim with invalid signature
         vm.expectRevert("Vote could not be verified");
         provider.reclaimIncentive(incentiveId, incorrectVoteInfo);

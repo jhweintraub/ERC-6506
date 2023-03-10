@@ -16,6 +16,8 @@ abstract contract TransparentIncentive is IncentiveBase {
         uint96 deadline) = abi.decode(incentiveInfo, (address, address, uint, uint256, bytes32, uint96));
 
         
+        console.log("DIRECTION TO COMMIT");
+        console.logBytes32(direction);  
         //Resolves a DOS vector where you can commit to some other data than what you provided
         bytes32 incentiveId = keccak256(incentiveInfo);
 

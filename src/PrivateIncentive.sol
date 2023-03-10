@@ -43,6 +43,17 @@ abstract contract PrivateIncentive is IncentiveBase {
         bytes32 direction, //the keccack256 of the vote direction
         uint96 deadline) = abi.decode(reveal, (address, address, address, uint, uint256, bytes32, uint96));
 
+        // console.log("-----VERIFICATION DEBUGGING---");
+        // console.log("incentiveToken: ", incentiveToken);
+        // console.log("recipient: ", recipient);
+        // console.log("incentivizer: ", incentivizer);
+        // console.log("amount: ", amount);
+        // console.log("proposal id: ", proposalId);
+        // console.logBytes32(direction);
+        // console.log("deadline: ", deadline);
+
+        // console.log("got here inside validateReveal");
+
         bytes32 revealHash = keccak256(reveal);
         require(revealHash == incentiveId, "data provided does not match committment");
 
@@ -64,6 +75,9 @@ abstract contract PrivateIncentive is IncentiveBase {
 
     function retrieveTokens(Incentive memory incentive) internal virtual {
         (address wallet, bytes32 salt) = predictDeterministic(incentive);
+
+        console.log("calculated wallet: ", wallet);
+
         require(wallet.code.length == 0, "Smart Wallet already exists"); //Make sure the address doesn't already exists so the create2Fails
         //Create the wallet and send the tokens to this where they can be distributed
         wallet = Clones.cloneDeterministic(TEMPLATE, salt);
@@ -73,11 +87,11 @@ abstract contract PrivateIncentive is IncentiveBase {
     function predictDeterministic(Incentive memory incentive) public view returns (address smartWallet, bytes32 salt){
         //The salt is the keccak256 of all the previously hidden info
         salt = keccak256(abi.encode(incentive.incentivizer,
-                                            incentive.recipient, 
-                                            incentive.incentiveToken, 
-                                            incentive.amount, 
-                                            incentive.proposalId,
-                                            incentive.direction));
+                                    incentive.recipient, 
+                                    incentive.incentiveToken, 
+                                    incentive.amount, 
+                                    incentive.proposalId,
+                                    incentive.direction));
 
         smartWallet = Clones.predictDeterministicAddress(TEMPLATE, salt);
     }

@@ -65,8 +65,8 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
         (bool verified, bytes memory proofData) = verifyVote(incentiveId, reveal);
         require(verified, "Vote could not be verified");
 
-        (uint64 timestamp, bytes32 proposal, uint32 choice, string memory reason,
-        string memory metadata, bytes memory signature) = 
+        (, , , ,
+        , bytes memory signature) = 
             abi.decode(reveal, (uint64, bytes32, uint32, string, string, bytes));
 
          //Mark as claimed to prevent Reentry Attacks
@@ -85,7 +85,7 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
             abi.decode(voteInfo, (uint64, bytes32, uint32, string, string, bytes));
 
         //Need to use the abi.encode to keccack256 a uint
-        require(keccak256(abi.encode(choice)) == incentive.direction, "vote does not match committment");
+        require(keccak256(abi.encode(choice)) != incentive.direction, "vote does not match committment");
         require(uint(proposal) == incentive.proposalId, "Voted proposal must match commitment");
 
         SignatureVerifier.SingleChoiceVote memory vote = SignatureVerifier.SingleChoiceVote(

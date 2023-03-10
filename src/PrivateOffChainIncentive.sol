@@ -9,13 +9,21 @@ import "./SignatureVerifier.sol";
 import "forge-std/console.sol";
 
 
-contract PrivateOffChainIncentives is PrivateIncentive, ReentrancyGuard  {
+contract PrivateOffChainIncentive is PrivateIncentive, ReentrancyGuard  {
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
 
     address public immutable signatureVerifier;
     string public app;
     string public space;
+
+    struct SignatureInfo {
+        uint actualVoteDirection;
+        uint votedAtTimestamp;
+        string reason;
+        string metadata;
+        bytes signature;
+    }
 
     constructor(address _feeRecipient, address _verifier, uint _feeBP, uint _bondAmount, address _bondToken,
     address _signatureVerifier, string memory _app, string memory _space) 
@@ -50,38 +58,54 @@ contract PrivateOffChainIncentives is PrivateIncentive, ReentrancyGuard  {
     }
 
     function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) noActiveDispute(incentiveId) external {
-        Incentive memory incentive = validateReveal(incentiveId, reveal);
+        //The SignatureInfo struct and the reveal in brackets are to prevent a "stack too deep error"
+        //Because you only have one call you need to package the reveal info and the signature
+        //verification info together which gets rlly messy very fast. Maybe consider reworking to use
+        //An incentive object as the base not the individual fields
+
+        (address incentiveToken,
+        address recipient,
+        address incentivizer,
+        uint amount,
+        bytes32 proposalId,
+        uint intendedVoteDirection, //the keccack256 of the vote direction
+        uint96 deadline,
+        SignatureInfo memory sigInfo
+        ) = abi.decode(reveal, (address, address, address, uint, bytes32, uint, uint96, SignatureInfo));
+
+        {
+            bytes memory revealData = abi.encode(incentiveToken,
+            recipient,
+            incentivizer,
+            amount,
+            uint(proposalId),
+            keccak256(abi.encode(intendedVoteDirection)), //the keccack256 of the vote direction
+                deadline);
+
+            console.log("preparing to validate");
+            validateReveal(incentiveId, revealData);
+        }
+
+
+        Incentive memory incentive = incentives[incentiveId]; 
 
         require(msg.sender == incentive.incentivizer, "only incentivizer can reclaim funds");
         require(!incentive.claimed, "Incentive has already been claimed or clawed back");
         require(block.timestamp >= (incentive.deadline), "not enough time has passed to claim yet");
         require(block.timestamp <= (incentive.deadline + 3 days), "missed your window to reclaim");
 
-    //     struct SingleChoiceVote {
-    //     address from;
-    //     string space;
-    //     uint64 timestamp;
-    //     bytes32 proposal;
-    //     uint32 choice;
-    //     string reason;
-    //     string app;
-    //     string metadata;
-    // }
+        //Show they voted in some other direction
+        require(keccak256(abi.encode(sigInfo.actualVoteDirection)) != incentive.direction, "vote direction must be different");
 
-        (uint64 timestamp, bytes32 proposal, uint32 choice, string memory reason,
-        string memory metadata, bytes memory signature) = 
-            abi.decode(reveal, (uint64, bytes32, uint32, string, string, bytes));
-
-        //Need to use the abi.encode to keccack256 a uint
-        require(keccak256(abi.encode(choice)) == incentive.direction, "vote does not match committment");
-        require(uint(proposal) == incentive.proposalId, "Voted proposal must match commitment");
-
+        // //Need to use the abi.encode to keccack256 a uint
         SignatureVerifier.SingleChoiceVote memory vote = SignatureVerifier.SingleChoiceVote(
-            incentive.recipient, space, timestamp, proposal, choice, reason, app, metadata
+            incentive.recipient, space, uint64(sigInfo.votedAtTimestamp), proposalId, 
+            uint32(sigInfo.actualVoteDirection),
+            sigInfo.reason, app, sigInfo.metadata
         );
 
         //Verify the signature
-        require(SignatureVerifier(verifier).verifySingleChoiceSignature(vote, signature, incentive.recipient));
+        require(SignatureVerifier(verifier).verifySingleChoiceSignature(vote, sigInfo.signature, incentive.recipient), "Vote could not be verified");
 
         //Retrieve tokens from the smart wallet
         retrieveTokens(incentive);
@@ -91,7 +115,7 @@ contract PrivateOffChainIncentives is PrivateIncentive, ReentrancyGuard  {
         
         //Send the incentive tokens back to the incentivizer
         ERC20(incentive.incentiveToken).safeTransfer(incentive.incentivizer, incentive.amount);
-        emit incentiveReclaimed(incentive.incentivizer, incentive.recipient, incentive.incentiveToken, incentive.amount, signature);
+        emit incentiveReclaimed(incentive.incentivizer, incentive.recipient, incentive.incentiveToken, incentive.amount, sigInfo.signature);
     }
 
     function verifyVote(bytes32 _incentive, bytes memory voteInfo) public view returns (bool isVerifiable, bytes memory proofData) {
@@ -102,7 +126,7 @@ contract PrivateOffChainIncentives is PrivateIncentive, ReentrancyGuard  {
             abi.decode(voteInfo, (uint64, bytes32, uint32, string, string, bytes));
 
         //Need to use the abi.encode to keccack256 a uint
-        require(keccak256(abi.encode(choice)) == incentive.direction, "vote does not match committment");
+        require(keccak256(abi.encode(choice)) != incentive.direction, "vote should not match committment");
         require(uint(proposal) == incentive.proposalId, "Voted proposal must match commitment");
 
         SignatureVerifier.SingleChoiceVote memory vote = SignatureVerifier.SingleChoiceVote(
@@ -119,11 +143,14 @@ contract PrivateOffChainIncentives is PrivateIncentive, ReentrancyGuard  {
         //Make sure the reveal matches, and if so then begin to file dispute
         validateReveal(incentiveId, disputeInfo);
 
-        // this.beginPublicDispute(incentiveId);
+        beginPublicDispute(incentiveId);
     }
 
     function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns(bool isDismissed) {
-      return super.resolveOffChainDispute(incentiveId, disputeResolutionInfo);
+        Incentive memory incentive = incentives[incentiveId];
+        retrieveTokens(incentive);//need to get the tokens from the smart wallet before we finish the dispute and send it off
+
+        return resolveOffChainDispute(incentiveId, disputeResolutionInfo);
     }
 
 

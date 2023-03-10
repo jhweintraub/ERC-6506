@@ -131,6 +131,7 @@ contract SignatureVerifier {
 
         (address signer,) = ECDSA.tryRecover(digest, signature);
         console.log("signer: ", signer);
+        console.log("expected signer: ", expectedSigner);
         return (signer == expectedSigner);
     }
 
@@ -142,7 +143,6 @@ contract SignatureVerifier {
         ));
 
         (address signer,) = ECDSA.tryRecover(digest, signature);
-
         return (signer == expectedSigner);
     }
 
