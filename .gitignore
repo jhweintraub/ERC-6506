@@ -10,3 +10,4 @@ coverage.json
 out/
 forge-cache/
 broadcast/
+foundry.toml
