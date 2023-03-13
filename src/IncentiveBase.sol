@@ -169,7 +169,7 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     /*///////////////////////////////////////////////////////////////
                             Claimer functions
     //////////////////////////////////////////////////////////////*/
-    function modifyClaimer(address claimer, bool designation) external returns (bool) {
+    function modifyClaimer(address claimer, bool designation) external {
         if (designation) {
             allowedClaimers[msg.sender][claimer] = true;
         }

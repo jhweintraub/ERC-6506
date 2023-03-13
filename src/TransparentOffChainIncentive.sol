@@ -52,22 +52,11 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
         require(block.timestamp >= (incentive.deadline), "not enough time has passed to claim yet");
         require(block.timestamp <= (incentive.deadline + 3 days), "missed your window to reclaim");
 
-    //     struct SingleChoiceVote {
-    //     address from;
-    //     string space;
-    //     uint64 timestamp;
-    //     bytes32 proposal;
-    //     uint32 choice;
-    //     string reason;
-    //     string app;
-    //     string metadata;
-    // }
+
         (bool verified, bytes memory proofData) = verifyVote(incentiveId, reveal);
         require(verified, "Vote could not be verified");
 
-        (, , , ,
-        , bytes memory signature) = 
-            abi.decode(reveal, (uint64, bytes32, uint32, string, string, bytes));
+        (, , , , , bytes memory signature) = abi.decode(reveal, (uint64, bytes32, uint32, string, string, bytes));
 
          //Mark as claimed to prevent Reentry Attacks
         incentives[incentiveId].claimed = true;
@@ -91,17 +80,6 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
         SignatureVerifier.SingleChoiceVote memory vote = SignatureVerifier.SingleChoiceVote(
             incentive.recipient, space, timestamp, proposal, choice, reason, app, metadata
         );
-
-        // console.logBytes(signature);
-        // console.log("recipient: ", incentive.recipient);
-        // console.log("space: ", space);
-        // console.log("timestamp: ", timestamp);
-        // console.logBytes32(proposal);
-        // console.log("choice: ", choice);
-        // console.log("reason: ", reason);
-        // console.log("app: ", app);
-        // console.log("metadata: ", metadata);
-        // console.log("space: ", space);
 
         //Verify the signature
         return (SignatureVerifier(verifier).verifySingleChoiceSignature(vote, signature, incentive.recipient), signature);

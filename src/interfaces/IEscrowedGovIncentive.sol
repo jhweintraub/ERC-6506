@@ -30,7 +30,7 @@ interface IEscrowedGovIncentive {
   
   function verifyVote(bytes32 incentive, bytes memory voteInfo) external view returns (bool isVerifiable, bytes memory proofData);
 
-  function modifyClaimer(address claimer, bool designation) external returns (bool);
+  function modifyClaimer(address claimer, bool designation) external;
 
   //Dispute Mechanism
   function beginDispute(bytes32 incentiveId, bytes memory disputeInfo) external payable;
