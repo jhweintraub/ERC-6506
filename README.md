@@ -1,6 +1,6 @@
 # ERC-6506 - The P2P Escrowed Governance-Incentive Standard
 
-Here is the official reference implementation for ERC-6505, the standard for P2P Escrowed Governance-Incentives. This repository contains the most up-to-date version of the EIP, example implementations, and relevant unit tests.
+Official reference implementation for ERC-6505, the standard for P2P Escrowed Governance-Incentives. This repository contains the most up-to-date version of the EIP, example implementations, and relevant unit tests.
 
 ERC-6506 was designed to be a modular system. Through a series of abstract contracts, your base implementation can pick and choose its functionality. 
 
