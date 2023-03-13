@@ -1,0 +1,8 @@
+[profile.default]
+src = 'src'
+out = 'out'
+libs = ['lib']
+eth-rpc-url = "https://rpc.ankr.com/eth"
+fuzz_runs = 256
+test = 'test/'
+cache_path = 'forge-cache'
