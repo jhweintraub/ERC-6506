@@ -144,6 +144,48 @@ contract TransparentOnChainTests is Test {
 
     }
 
+    function testReclaimIncentive(uint amount) public {
+        vm.assume(amount > 1e6 && amount < 1e12);
+
+        uint preBal = USDC.balanceOf(angel);
+
+        //Submit the incentive
+        bytes32 incentiveId = testCreateIncentive(amount);
+
+        //Do the voting - Alice should vote for "YES"
+        startHoax(alice, alice);
+        governor.castVote(proposalId, uint8(0));
+
+        IGovernorCompatibilityBravo.Receipt memory receipt = governor.getReceipt(proposalId, alice);
+        bytes memory proofData = abi.encode(receipt);
+
+        vm.stopPrank();
+        hoax(angel, angel);
+        provider.reclaimIncentive(incentiveId, proofData);
+
+        //TODO: Check event logs
+
+        assertEq(USDC.balanceOf(angel), preBal, "angel incentive amount not returned");
+    }
+
+    function testCannotReclaimIncentiveWithYesVote(uint amount) public {
+        vm.assume(amount > 1e6 && amount < 1e12);
+        //Submit the incentive
+        bytes32 incentiveId = testCreateIncentive(amount);
+
+        //Do the voting - Alice should vote for "YES"
+        startHoax(alice, alice);
+        governor.castVote(proposalId, uint8(1));
+
+        IGovernorCompatibilityBravo.Receipt memory receipt = governor.getReceipt(proposalId, alice);
+        bytes memory proofData = abi.encode(receipt);
+
+        vm.stopPrank();
+        hoax(angel, angel);
+        vm.expectRevert("Cannot reclaim, user did vote in line with incentive");
+        provider.reclaimIncentive(incentiveId, proofData);
+    }
+
     function testClaimIncentiveWithYesVote(uint amount) public {
         vm.assume(amount > 1e6 && amount < 1e12);
         //Submit the incentive
@@ -184,8 +226,6 @@ contract TransparentOnChainTests is Test {
         startHoax(alice, alice);
         governor.castVote(proposalId, uint8(0));//Vote for 0 = "AGAINST"
 
-        uint preBal = USDC.balanceOf(alice);
-
         //Make sure event logs are emitted correctly
         vm.expectRevert("Vote could not be verified");
         provider.claimIncentive(incentiveId, "", payable(alice));
@@ -198,9 +238,12 @@ contract TransparentOnChainTests is Test {
         //Do the voting - Alice should vote for "YES"
         startHoax(alice, alice);
         governor.castVote(proposalId, uint8(1));//Vote for 1 = "FOR"
+
+        //Test the ability to flip flop on an allowed claimer
+        provider.modifyClaimer(bob, true);
+        provider.modifyClaimer(bob, false);
         provider.modifyClaimer(bob, true);
 
-        uint preBal = USDC.balanceOf(alice);
 
         vm.stopPrank();
 
@@ -218,8 +261,6 @@ contract TransparentOnChainTests is Test {
         //Do the voting - Alice should vote for "YES"
         startHoax(alice, alice);
         governor.castVote(proposalId, uint8(1));//Vote for 1 = "FOR"
-
-        uint preBal = USDC.balanceOf(alice);
 
         vm.stopPrank();
 
@@ -277,6 +318,28 @@ contract TransparentOnChainTests is Test {
 
         IEscrowedGovIncentive.Incentive memory incentive = provider.getIncentive(incentiveId);
         assert(incentive.claimed);
+    }
+
+    function testAdminFunctions() public {
+        vm.expectRevert();
+        provider.changeVerifier(address(0));
+        provider.changeVerifier(address(1));
+
+        uint currFeeBP = provider.feeBP();
+        uint currBondAmount = provider.bondAmount();
+        provider.changeFeeBP(provider.feeBP() * 2);
+        provider.changeBondAmount(provider.bondAmount() * 2);
+        assertEq(provider.feeBP(), currFeeBP * 2, "feeBP not matching expected");
+        assertEq(provider.bondAmount(), currBondAmount * 2, "feeBP not matching expected");
+
+
+        vm.expectRevert();
+        provider.changeBondToken(address(0));
+        provider.changeBondToken(address(1));
+        assertEq(provider.bondToken(), address(1), "bond tokens don't match expected value");
+
+        provider.removeArbiter(arbiter);
+        assertFalse(provider.arbiters(arbiter));
     }
 
 }

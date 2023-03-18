@@ -198,8 +198,8 @@ contract PrivateOffChainTests is Test {
         assertEq(USDC.balanceOf(FEE_RECIPIENT), expectedFeeAmount);
 
         //Check that the state was managed correctly
-        IEscrowedGovIncentive.Incentive memory incentive = provider.getIncentive(incentiveId);
-        assert(incentive.claimed);
+        IEscrowedGovIncentive.Incentive memory retrievedIncentive = provider.getIncentive(incentiveId);
+        assert(retrievedIncentive.claimed);
     }
 
     function testReclaimIncentiveWithNoVote(uint amount) public {
@@ -272,8 +272,8 @@ contract PrivateOffChainTests is Test {
         provider.reclaimIncentive(incentiveId, correctVoteInfo);
 
         assertEq(USDC.balanceOf(angel), preBal, "incentive not returned to angel");
-        IEscrowedGovIncentive.Incentive memory incentive = provider.getIncentive(incentiveId);
-        assert(incentive.claimed);
+        IEscrowedGovIncentive.Incentive memory retrievedIncentive = provider.getIncentive(incentiveId);
+        assert(retrievedIncentive.claimed);
 
 
         vm.stopPrank();
@@ -315,8 +315,6 @@ contract PrivateOffChainTests is Test {
 
         provider.modifyClaimer(bob, true);
 
-        uint preBal = USDC.balanceOf(alice);
-
         vm.stopPrank();
         skip(10 days);
 
@@ -345,7 +343,6 @@ contract PrivateOffChainTests is Test {
         startHoax(alice, alice);
         //TODO: Create Signature
 
-        uint preBal = USDC.balanceOf(alice);
 
         vm.stopPrank();
 
@@ -407,8 +404,8 @@ contract PrivateOffChainTests is Test {
         provider.resolveDispute(incentiveId, abi.encode(angel));
 
         assertEq(USDC.balanceOf(angel), preBal);
-        IEscrowedGovIncentive.Incentive memory incentive = provider.getIncentive(incentiveId);
-        assert(incentive.claimed);
+        IEscrowedGovIncentive.Incentive memory retrievedIncentive = provider.getIncentive(incentiveId);
+        assert(retrievedIncentive.claimed);
     }
 
     function testDisputeForDefendant(uint amount) public {
@@ -429,8 +426,8 @@ contract PrivateOffChainTests is Test {
         assertEq(USDC.balanceOf(alice), preBal + amount);
         assertEq(USDC.balanceOf(FEE_RECIPIENT), feeRecipientBal + bondAmount);    
 
-        IEscrowedGovIncentive.Incentive memory incentive = provider.getIncentive(incentiveId);
-        assert(incentive.claimed);
+        IEscrowedGovIncentive.Incentive memory retrievedIncentive = provider.getIncentive(incentiveId);
+        assert(retrievedIncentive.claimed);
     }
 
 }

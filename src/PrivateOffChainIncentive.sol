@@ -57,7 +57,7 @@ contract PrivateOffChainIncentive is PrivateIncentive, ReentrancyGuard  {
         emit incentiveClaimed(incentive.incentivizer, incentive.recipient, incentiveId, "");
     }
 
-    function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) noActiveDispute(incentiveId) external {
+    function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) nonReentrant noActiveDispute(incentiveId) external {
         //The SignatureInfo struct and the reveal in brackets are to prevent a "stack too deep error"
         //Because you only have one call you need to package the reveal info and the signature
         //verification info together which gets rlly messy very fast. Maybe consider reworking to use
@@ -82,7 +82,6 @@ contract PrivateOffChainIncentive is PrivateIncentive, ReentrancyGuard  {
             keccak256(abi.encode(intendedVoteDirection)), //the keccack256 of the vote direction
                 deadline);
 
-            console.log("preparing to validate");
             validateReveal(incentiveId, revealData);
         }
 
@@ -146,7 +145,7 @@ contract PrivateOffChainIncentive is PrivateIncentive, ReentrancyGuard  {
         beginPublicDispute(incentiveId);
     }
 
-    function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns(bool isDismissed) {
+    function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override nonReentrant returns(bool isDismissed) {
         Incentive memory incentive = incentives[incentiveId];
         retrieveTokens(incentive);//need to get the tokens from the smart wallet before we finish the dispute and send it off
 

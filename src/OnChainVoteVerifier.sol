@@ -13,7 +13,7 @@ contract OnChainVoteVerifier is IVoteVerifier {
         votingContract = IGovernorCompatibilityBravo(_votingContract);
     }
 
-    function verifyVote(IEscrowedGovIncentive.Incentive calldata incentive, bytes calldata voteData) external view returns (bool, bytes memory) {
+    function verifyVote(IEscrowedGovIncentive.Incentive calldata incentive, bytes calldata) external view returns (bool, bytes memory) {
         
         //You don't need to check anything else about the vote like that it's ended since your vote can't be changed once made
         //So you can literally claim your incentive immediately after voting if verification is on-chain.

@@ -26,7 +26,7 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
 
     //It should inherit from 
 
-    function claimIncentive(bytes32 incentiveId, bytes memory reveal, address payable recipient) external nonReentrant noActiveDispute(incentiveId) isAllowedClaimer(incentiveId) {
+    function claimIncentive(bytes32 incentiveId, bytes memory, address payable recipient) external nonReentrant noActiveDispute(incentiveId) isAllowedClaimer(incentiveId) {
         Incentive memory incentive = incentives[incentiveId];
 
         require(!incentive.claimed, "Incentive has already been claimed or clawed back");
@@ -44,7 +44,7 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
         emit incentiveClaimed(incentive.incentivizer, incentive.recipient, incentiveId, "");
     }
 
-    function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) noActiveDispute(incentiveId) external {
+    function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) nonReentrant noActiveDispute(incentiveId) external {
         Incentive memory incentive = incentives[incentiveId];
 
         require(msg.sender == incentive.incentivizer, "only incentivizer can reclaim funds");
@@ -53,7 +53,7 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
         require(block.timestamp <= (incentive.deadline + 3 days), "missed your window to reclaim");
 
 
-        (bool verified, bytes memory proofData) = verifyVote(incentiveId, reveal);
+        (bool verified, ) = verifyVote(incentiveId, reveal);
         require(verified, "Vote could not be verified");
 
         (, , , , , bytes memory signature) = abi.decode(reveal, (uint64, bytes32, uint32, string, string, bytes));
@@ -87,12 +87,12 @@ contract TransparentOffChainIncentives is TransparentIncentive, ReentrancyGuard 
 
     //TODO: Reentrancy Guard all the functions
     //Dispute Mechanism
-    function beginDispute(bytes32 incentiveId, bytes memory disputeInfo) external override payable {
+    function beginDispute(bytes32 incentiveId, bytes memory) nonReentrant external override payable {
         //Can just use inherited version since they would have reclaimed already if possible
         beginPublicDispute(incentiveId);
     }
 
-    function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns(bool isDismissed) {
+    function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override nonReentrant returns(bool isDismissed) {
       return super.resolveOffChainDispute(incentiveId, disputeResolutionInfo);
     }
 

@@ -39,11 +39,11 @@ contract TransparentOnChainIncentives is TransparentIncentive, ReentrancyGuard {
         emit incentiveClaimed(incentive.incentivizer, incentive.recipient, incentiveId, proofData);
     }
 
-    function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) noActiveDispute(incentiveId) external {
+    function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) nonReentrant noActiveDispute(incentiveId) external {
         Incentive memory incentive = incentives[incentiveId];
         require(!incentive.claimed, "Incentive has already been reclaimed");
         
-        (bool verified, bytes memory proofData) = verifyVote(incentiveId, reveal);
+        (bool verified, ) = verifyVote(incentiveId, reveal);
         require(!verified, "Cannot reclaim, user did vote in line with incentive");
 
         //Mark as claimed to prevent Reentry Attacks
@@ -61,16 +61,16 @@ contract TransparentOnChainIncentives is TransparentIncentive, ReentrancyGuard {
 
     //TODO: Reentrancy Guard all the functions
     //Dispute Mechanism
-    function beginDispute(bytes32 incentiveId, bytes memory) external override payable {
+    function beginDispute(bytes32 incentiveId, bytes memory) external nonReentrant override payable {
         //Since info is already public we can just use the normal begin process
         beginPublicDispute(incentiveId);
     }
 
     //TODO: Reentrancy Guard all the functions
-    function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns (bool isDismissed) {
+    function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override nonReentrant returns (bool isDismissed) {
         //Just let the fucking arbiters handle it not like a dispute here would ever get filed anyways
 
-        return super.resolveOnChainDispute(incentiveId, disputeResolutionInfo);
+        return resolveOnChainDispute(incentiveId, disputeResolutionInfo);
     }
 
 }

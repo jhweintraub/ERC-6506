@@ -36,7 +36,6 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
         require(_feeRecipient != address(0), "Address cannot be zero");
         require(_verifier != address(0), "Address cannot be zero");
         require(_bondToken != address(0), "Address cannot be zero");
-
         require(_bondAmount != 0, "Bond Amount cannot be zero");
 
         feeRecipient = _feeRecipient;
@@ -60,14 +59,10 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
         require(incentive.deadline <= block.timestamp, "not enough time has passed yet to file a dispute");
 
         //Necesarry to prevent spam dispute filings
-        console.log("msg sender: ", msg.sender);
-        console.log("incentivizer: ", incentive.incentivizer);
         require(msg.sender == incentive.incentivizer, "only the incentivizer can file a dispute over the incentive");
        
 
         //Transfer Bond to this
-        console.log("bond token: ", bondToken);
-        console.log("bondAmount: ", bondAmount);
         ERC20(bondToken).safeTransferFrom(msg.sender, address(this), bondAmount);
 
         disputes[incentiveId] = true;
@@ -215,10 +210,15 @@ abstract contract IncentiveBase is IEscrowedGovIncentive, Ownable {
     }
 
     function changeBondToken(address _newBondToken) external onlyOwner {
+        require(_newBondToken != address(0));
         bondToken = _newBondToken;
     }
 
     function addArbiter(address _arbiter) external onlyOwner {
         arbiters[_arbiter] = true;
+    }
+
+    function removeArbiter(address _arbiter) external onlyOwner {
+        arbiters[_arbiter] = false;
     }
 }

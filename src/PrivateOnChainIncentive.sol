@@ -39,7 +39,7 @@ contract PrivateOnChainIncentive is PrivateIncentive, ReentrancyGuard  {
         emit incentiveClaimed(incentive.incentivizer, incentive.recipient, incentiveId, proofData);
     }
 
-    function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) noActiveDispute(incentiveId) external {
+    function reclaimIncentive(bytes32 incentiveId, bytes memory reveal) nonReentrant noActiveDispute(incentiveId) external {
         Incentive memory incentive = validateReveal(incentiveId, reveal);
         
         // Incentive memory incentive = incentives[incentiveId];
@@ -74,7 +74,7 @@ contract PrivateOnChainIncentive is PrivateIncentive, ReentrancyGuard  {
         
     }
 
-    function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override returns (bool isDismissed) {
+    function resolveDispute(bytes32 incentiveId, bytes memory disputeResolutionInfo) external override nonReentrant returns (bool isDismissed) {
         //Just let the fucking arbiters handle it not like this dispute would ever get filed anyways
         Incentive memory incentive = incentives[incentiveId];
         retrieveTokens(incentive);//need to get the tokens from the smart wallet before we finish the dispute and send it off

@@ -3,8 +3,6 @@ pragma solidity ^0.8.13;
 
 import "openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-import "forge-std/console.sol";
-
 contract SignatureVerifier {
 
     struct EIP712Domain {
@@ -23,28 +21,6 @@ contract SignatureVerifier {
         string metadata;
     }
 
-    struct MultiChoiceVote {
-        address from;
-        string space;
-        uint64 timestamp;
-        bytes32 proposal;
-        uint32[] choice;
-        string reason;
-        string app;
-        string metadata;
-    }
-
-    struct StringChoiceVote {
-        address from;
-        string space;
-        uint64 timestamp;
-        bytes32 proposal;
-        string choice;
-        string reason;
-        string app;
-        string metadata;
-    }
-
     bytes32 constant EIP712DOMAIN_TYPEHASH = keccak256(
         "EIP712Domain(string name,string version)"
     );
@@ -52,14 +28,6 @@ contract SignatureVerifier {
     //TODO: Consider changing proposal to a bytes32
     bytes32 constant SINGLE_CHOICE_VOTE_TYPEHASH = keccak256(
         "Vote(address from,string space,uint64 timestamp,bytes32 proposal,uint32 choice,string reason,string app,string metadata)"
-    );
-
-    bytes32 constant MULTI_CHOICE_VOTE_TYPEHASH = keccak256(
-        "Vote(address from,string space,uint64 timestamp,bytes32 proposal,uint32[] choice,string reason,string app,string metadata)"
-    );
-
-    bytes32 constant STRING_CHOICE_VOTE_TYPEHASH = keccak256(
-        "Vote(address from,string space,uint64 timestamp,bytes32 proposal,string choice,string reason,string app,string metadata)"
     );
 
     bytes32 public DOMAIN_SEPARATOR;
@@ -93,35 +61,6 @@ contract SignatureVerifier {
         ));
     }
 
-    function hashMultiChoiceVote(MultiChoiceVote memory vote) public pure returns (bytes32) {
-        return keccak256(abi.encode(
-            MULTI_CHOICE_VOTE_TYPEHASH,
-            vote.from,
-            keccak256(bytes(vote.space)),
-            vote.timestamp,
-            vote.proposal,
-            keccak256(abi.encodePacked(vote.choice)),
-            keccak256(bytes(vote.reason)),
-            keccak256(bytes(vote.app)),
-            keccak256(bytes(vote.metadata))
-        ));
-    }
-
-    function hashStringChoiceVote(StringChoiceVote memory vote) public pure returns (bytes32) {
-        return keccak256(abi.encode(
-            STRING_CHOICE_VOTE_TYPEHASH,
-            vote.from,
-            keccak256(bytes(vote.space)),
-            vote.timestamp,
-            vote.proposal,
-            keccak256(bytes(vote.choice)),
-            keccak256(bytes(vote.reason)),
-            keccak256(bytes(vote.app)),
-            keccak256(bytes(vote.metadata))
-        ));
-    }
-
-
     function verifySingleChoiceSignature(SingleChoiceVote memory vote, bytes memory signature, address expectedSigner) public view returns (bool) {
         bytes32 digest = keccak256(abi.encodePacked(
             "\x19\x01",
@@ -130,31 +69,9 @@ contract SignatureVerifier {
         ));
 
         (address signer,) = ECDSA.tryRecover(digest, signature);
-        console.log("signer: ", signer);
-        console.log("expected signer: ", expectedSigner);
         return (signer == expectedSigner);
     }
 
-    function verifyMultiChoiceSignature(MultiChoiceVote memory vote, bytes memory signature, address expectedSigner) public view returns (bool) {
-        bytes32 digest = keccak256(abi.encodePacked(
-            "\x19\x01",
-            DOMAIN_SEPARATOR,
-            this.hashMultiChoiceVote(vote)
-        ));
+   
 
-        (address signer,) = ECDSA.tryRecover(digest, signature);
-        return (signer == expectedSigner);
-    }
-
-    function verifyStringChoiceSignature(StringChoiceVote memory vote, bytes memory signature, address expectedSigner) public view returns (bool) {
-        bytes32 digest = keccak256(abi.encodePacked(
-            "\x19\x01",
-            DOMAIN_SEPARATOR,
-            this.hashStringChoiceVote(vote)
-        ));
-
-        (address signer,) = ECDSA.tryRecover(digest, signature);
-
-        return (signer == expectedSigner);
-    }
 }

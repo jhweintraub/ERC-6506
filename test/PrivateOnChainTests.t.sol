@@ -146,16 +146,64 @@ contract PrivateOnChainTests is Test {
         */
         provider.incentivize(incentiveId, "");
 
-        IEscrowedGovIncentive.Incentive memory incentive = provider.getIncentive(incentiveId);
+        IEscrowedGovIncentive.Incentive memory retrievedIncentive = provider.getIncentive(incentiveId);
         //Theoretically we only need to check that a single value made it into storage
         
-        assertEq(incentive.incentivizer, angel, "incentivizer is not angel");
-        assertEq(incentive.timestamp, uint96(block.timestamp), "block timestamps don't match");
-        assertFalse(incentive.claimed, "claimed is true, it should be false");        
+        assertEq(retrievedIncentive.incentivizer, angel, "incentivizer is not angel");
+        assertEq(retrievedIncentive.timestamp, uint96(block.timestamp), "block timestamps don't match");
+        assertFalse(retrievedIncentive.claimed, "claimed is true, it should be false");        
 
         assertEq(USDC.balanceOf(wallet), amount, "funds were not sent to wallet");
         assertEq(USDC.balanceOf(angel), preBal - amount, "funds were not deduced from angel");
         vm.stopPrank();
+    }
+
+    function testReclaimIncentive(uint amount) public {
+        vm.assume(amount > 1e6 && amount < 1e12);
+
+        uint preBal = USDC.balanceOf(angel);
+
+        bytes32 incentiveId = testCreateIncentive(amount);
+
+        bytes memory incentiveData = abi.encode(
+            address(USDC),
+            alice,
+            angel,
+            amount, //100 USDC
+            proposalId,
+            keccak256(abi.encodePacked(uint(1))),//1 = Yes
+            block.timestamp + 1 weeks);
+
+
+        hoax(alice, alice);
+        governor.castVote(proposalId, uint8(0));
+
+        hoax(angel, angel);
+        provider.reclaimIncentive(incentiveId, incentiveData);
+
+        assertEq(USDC.balanceOf(angel), preBal, "amount of tokens not returned to angel");
+    }
+
+    function testCannotReclaimIncentiveWithYesVote(uint amount) public {
+        vm.assume(amount > 1e6 && amount < 1e12);
+        bytes32 incentiveId = testCreateIncentive(amount);
+
+        bytes memory incentiveData = abi.encode(
+            address(USDC),
+            alice,
+            angel,
+            amount, //100 USDC
+            proposalId,
+            keccak256(abi.encodePacked(uint(1))),//1 = Yes
+            block.timestamp + 1 weeks);
+
+
+        hoax(alice, alice);
+        governor.castVote(proposalId, uint8(1));
+
+        hoax(angel, angel);
+        vm.expectRevert("Cannot reclaim, user did vote in line with incentive");
+        provider.reclaimIncentive(incentiveId, incentiveData);
     }
 
     function testCannotClaimWithoutProperReveal(uint amount) public {
@@ -186,9 +234,6 @@ contract PrivateOnChainTests is Test {
         governor.castVote(proposalId, uint8(1));
 
         uint preBal = USDC.balanceOf(alice);
-
-        IGovernorCompatibilityBravo.Receipt memory receipt = governor.getReceipt(proposalId, alice);
-        bytes memory proofData = abi.encode(receipt);
 
         bytes memory incentiveData = abi.encode(
             address(USDC),
@@ -222,8 +267,6 @@ contract PrivateOnChainTests is Test {
         startHoax(alice, alice);
         governor.castVote(proposalId, uint8(0));//Vote for 0 = "AGAINST"
 
-        uint preBal = USDC.balanceOf(alice);
-
         bytes memory incentiveData = abi.encode(
             address(USDC),
             alice,
@@ -246,8 +289,6 @@ contract PrivateOnChainTests is Test {
         startHoax(alice, alice);
         governor.castVote(proposalId, uint8(1));//Vote for 1 = "FOR"
         provider.modifyClaimer(bob, true);
-
-        uint preBal = USDC.balanceOf(alice);
 
         vm.stopPrank();
 
@@ -276,8 +317,6 @@ contract PrivateOnChainTests is Test {
         //Do the voting - Alice should vote for "YES"
         startHoax(alice, alice);
         governor.castVote(proposalId, uint8(1));//Vote for 1 = "FOR"
-
-        uint preBal = USDC.balanceOf(alice);
 
         vm.stopPrank();
 
@@ -367,6 +406,28 @@ contract PrivateOnChainTests is Test {
         assertEq(retrievedIncentive.deadline, incentive.timestamp + 1 weeks, "deadlines don't match");
         assertEq(retrievedIncentive.timestamp, incentive.timestamp, "timestamps dont match");
         assert(retrievedIncentive.claimed);  
+    }
+
+    function testAdminFunctions() public {
+        vm.expectRevert();
+        provider.changeVerifier(address(0));
+        provider.changeVerifier(address(1));
+
+        uint currFeeBP = provider.feeBP();
+        uint currBondAmount = provider.bondAmount();
+        provider.changeFeeBP(provider.feeBP() * 2);
+        provider.changeBondAmount(provider.bondAmount() * 2);
+        assertEq(provider.feeBP(), currFeeBP * 2, "feeBP not matching expected");
+        assertEq(provider.bondAmount(), currBondAmount * 2, "feeBP not matching expected");
+
+
+        vm.expectRevert();
+        provider.changeBondToken(address(0));
+        provider.changeBondToken(address(1));
+        assertEq(provider.bondToken(), address(1), "bond tokens don't match expected value");
+
+        provider.removeArbiter(arbiter);
+        assertFalse(provider.arbiters(arbiter));
     }
 
 }

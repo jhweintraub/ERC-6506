@@ -248,8 +248,6 @@ contract TransparentOffChainTests is Test {
 
         provider.modifyClaimer(bob, true);
 
-        uint preBal = USDC.balanceOf(alice);
-
         vm.stopPrank();
         skip(10 days);
 
@@ -264,11 +262,7 @@ contract TransparentOffChainTests is Test {
         vm.assume(amount > 1e6 && amount < 1e12);
         bytes32 incentiveId = testCreateIncentive(amount);
 
-        //Do the voting - Alice should vote for "YES"
         startHoax(alice, alice);
-        //TODO: Create Signature
-
-        uint preBal = USDC.balanceOf(alice);
 
         vm.stopPrank();
 
@@ -345,6 +339,28 @@ contract TransparentOffChainTests is Test {
 
         IEscrowedGovIncentive.Incentive memory incentive = provider.getIncentive(incentiveId);
         assert(incentive.claimed);
+    }
+
+    function testAdminFunctions() public {
+        vm.expectRevert();
+        provider.changeVerifier(address(0));
+        provider.changeVerifier(address(1));
+
+        uint currFeeBP = provider.feeBP();
+        uint currBondAmount = provider.bondAmount();
+        provider.changeFeeBP(provider.feeBP() * 2);
+        provider.changeBondAmount(provider.bondAmount() * 2);
+        assertEq(provider.feeBP(), currFeeBP * 2, "feeBP not matching expected");
+        assertEq(provider.bondAmount(), currBondAmount * 2, "feeBP not matching expected");
+
+
+        vm.expectRevert();
+        provider.changeBondToken(address(0));
+        provider.changeBondToken(address(1));
+        assertEq(provider.bondToken(), address(1), "bond tokens don't match expected value");
+
+        provider.removeArbiter(arbiter);
+        assertFalse(provider.arbiters(arbiter));
     }
 
 }
