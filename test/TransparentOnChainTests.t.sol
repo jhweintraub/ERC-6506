@@ -163,8 +163,6 @@ contract TransparentOnChainTests is Test {
         hoax(angel, angel);
         provider.reclaimIncentive(incentiveId, proofData);
 
-        //TODO: Check event logs
-
         assertEq(USDC.balanceOf(angel), preBal, "angel incentive amount not returned");
     }
 

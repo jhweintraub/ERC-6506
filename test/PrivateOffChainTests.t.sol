@@ -145,7 +145,6 @@ contract PrivateOffChainTests is Test {
         startHoax(angel, angel);
         USDC.safeTransfer(wallet, amount);
 
-        //TODO: Replace with some data and make sure it gets emitted
         provider.incentivize(incentiveId, "");
         
         IEscrowedGovIncentive.Incentive memory commitedIncentive = provider.getIncentive(incentiveId);
@@ -184,11 +183,6 @@ contract PrivateOffChainTests is Test {
         //Skip to some time after the deadline 
         skip(7 days);
         uint preBal = USDC.balanceOf(alice);
-
-        //TODO: Make sure event logs are emitted correctly
-        // vm.expectEmit(true, true, true, true);
-        // emit incentiveClaimed(angel, alice, incentiveId, proofData);
-
         provider.claimIncentive(incentiveId, incentiveData, payable(alice));
                 
         uint expectedFeeAmount = amount.mulDivDown(feeBP, BASIS_POINTS);
@@ -229,13 +223,10 @@ contract PrivateOffChainTests is Test {
 
         startHoax(angel, angel);
 
-        console.log("where is this failing");
 
         //TODO: expectRevert because window hasn't closed yet
         vm.expectRevert("not enough time has passed to claim yet");
         provider.reclaimIncentive(incentiveId, correctVoteInfo);
-
-        console.log("is it here?");
 
         //Skip forward to end of voting window
         skip(2 weeks);
@@ -263,7 +254,6 @@ contract PrivateOffChainTests is Test {
             )
         );
 
-        console.log("--- GOT HERE---");
         //Cannot claim with invalid signature
         vm.expectRevert("Vote could not be verified");
         provider.reclaimIncentive(incentiveId, incorrectVoteInfo);
@@ -274,7 +264,6 @@ contract PrivateOffChainTests is Test {
         assertEq(USDC.balanceOf(angel), preBal, "incentive not returned to angel");
         IEscrowedGovIncentive.Incentive memory retrievedIncentive = provider.getIncentive(incentiveId);
         assert(retrievedIncentive.claimed);
-
 
         vm.stopPrank();
 
@@ -293,7 +282,6 @@ contract PrivateOffChainTests is Test {
         vm.expectRevert("Incentive has already been claimed or clawed back");
         provider.claimIncentive(incentiveId, moreRevealData, payable(alice));
     }
-
 
     function testClaimIncentiveWithAllowedClaimer(uint amount) public {
         vm.assume(amount > 1e6 && amount < 1e12);
@@ -341,7 +329,6 @@ contract PrivateOffChainTests is Test {
 
         //Do the voting - Alice should vote for "YES"
         startHoax(alice, alice);
-        //TODO: Create Signature
 
 
         vm.stopPrank();
@@ -363,7 +350,7 @@ contract PrivateOffChainTests is Test {
             address(USDC),
             alice,
             angel,
-            amount, //100 USDC
+            amount,
             proposalId,
             committmentVoteDirection,//1 = Yes
             incentive.timestamp + 1 weeks
@@ -373,17 +360,12 @@ contract PrivateOffChainTests is Test {
 
         uint preBal = USDC.balanceOf(angel);
 
-        //TODO: Expect Revert due to window not closing
-        //Roll forward to dispute window open 
-
         hoax(angel, angel);
         provider.beginDispute(incentiveId, revealData);
 
         assert(provider.disputes(incentiveId));
         assertEq(USDC.balanceOf(angel), preBal - bondAmount, "Bond was not successfully payed");
     
-        //TODO: Create Merkle Root for Voters
-        //TODO: Add Merkle Root
         hoax(arbiter, arbiter);
         provider.setMerkleRoot(incentiveId, MerkleRoot);
     
@@ -396,8 +378,6 @@ contract PrivateOffChainTests is Test {
 
         bytes32 incentiveId = createDispute(amount);
 
-        //TODO: vm.expectRevert from window not closing
-        //TODO: Fast forward then claim
         skip(3 days);
 
         hoax(angel, angel);
@@ -416,8 +396,6 @@ contract PrivateOffChainTests is Test {
 
         bytes32 incentiveId = createDispute(amount);
 
-
-        //TODO: Create merkle proof and verify
         bytes32[] memory merkleProof = MerkleTreeGenerator.getProof(voters, 9);
 
         hoax(alice, alice);
@@ -429,5 +407,4 @@ contract PrivateOffChainTests is Test {
         IEscrowedGovIncentive.Incentive memory retrievedIncentive = provider.getIncentive(incentiveId);
         assert(retrievedIncentive.claimed);
     }
-
 }

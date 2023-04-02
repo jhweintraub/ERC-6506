@@ -155,11 +155,6 @@ contract TransparentOffChainTests is Test {
         skip(7 days);
         uint preBal = USDC.balanceOf(alice);
 
-        //TODO: Fix
-        //Make sure event logs are emitted correctly
-        // vm.expectEmit(true, true, true, true);
-        // emit incentiveClaimed(angel, alice, incentiveId, proofData);
-
         provider.claimIncentive(incentiveId, "", payable(alice));
         
         uint expectedFeeAmount = amount.mulDivDown(feeBP, BASIS_POINTS);
@@ -244,7 +239,6 @@ contract TransparentOffChainTests is Test {
 
         //Do the voting - Alice should vote for "YES"
         startHoax(alice, alice);
-        //TODO: Create Signature
 
         provider.modifyClaimer(bob, true);
 
@@ -283,8 +277,6 @@ contract TransparentOffChainTests is Test {
 
         uint preBal = USDC.balanceOf(angel);
 
-        //TODO: Expect Revert due to window not closing
-        //Roll forward to dispute window open 
 
         hoax(angel, angel);
         provider.beginDispute(incentiveId, "");
@@ -292,8 +284,6 @@ contract TransparentOffChainTests is Test {
         assert(provider.disputes(incentiveId));
         assertEq(USDC.balanceOf(angel), preBal - bondAmount, "Bond was not successfully payed");
     
-        //TODO: Create Merkle Root for Voters
-        //TODO: Add Merkle Root
         hoax(arbiter, arbiter);
         provider.setMerkleRoot(incentiveId, MerkleRoot);
     
@@ -306,8 +296,6 @@ contract TransparentOffChainTests is Test {
 
         bytes32 incentiveId = createDispute(amount);
 
-        //TODO: vm.expectRevert from window not closing
-        //TODO: Fast forward then claim
         skip(3 days);
 
         hoax(angel, angel);
@@ -327,7 +315,6 @@ contract TransparentOffChainTests is Test {
         bytes32 incentiveId = createDispute(amount);
 
 
-        //TODO: Create merkle proof and verify
         bytes32[] memory merkleProof = MerkleTreeGenerator.getProof(voters, 9);
 
         hoax(alice, alice);

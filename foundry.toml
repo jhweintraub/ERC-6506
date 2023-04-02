@@ -6,3 +6,6 @@ eth-rpc-url = "https://eth-mainnet.alchemyapi.io/v2/zOVFUzSEld1v_MuTOqGPYkTYttwB
 fuzz_runs = 256
 test = 'test/'
 cache_path = 'forge-cache'
+optimizer = false
+force = true
+via_ir = false
