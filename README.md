@@ -34,4 +34,4 @@ This repository uses an external library I wrote, [SnapshotSignatureVerifier](ht
 
 ## Dispute Mechanism
 
-<img src="https://i.imgur.com/7o90Bl6.png" width="600">
+<img src="https://i.imgur.com/YMuESnl.png" width="600">
