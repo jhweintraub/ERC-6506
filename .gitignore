@@ -11,3 +11,4 @@ out/
 forge-cache/
 broadcast/
 foundry.toml
+laTex/*
