@@ -72,14 +72,14 @@ abstract contract PrivateIncentive is IncentiveBase {
     }
 
     function predictDeterministic(Incentive memory incentive) public view returns (address smartWallet, bytes32 salt){
-        //The salt is the keccak256 of all the previously hidden info
-        salt = keccak256(abi.encode(incentive.incentivizer,
-                                    incentive.recipient, 
-                                    incentive.incentiveToken, 
-                                    incentive.amount, 
+        //The salt is the keccak256 of all the previously hidden info but in a different order than the incentiveId
+        salt = keccak256(abi.encode(incentive.amount,                                    
+                                    incentive.incentivizer,
                                     incentive.proposalId,
-                                    incentive.direction,
-                                    incentive.deadline));
+                                    incentive.recipient, 
+                                    incentive.incentiveToken,
+                                    incentive.deadline,
+                                    incentive.direction));
 
         smartWallet = Clones.predictDeterministicAddress(TEMPLATE, salt);
     }
