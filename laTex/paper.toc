@@ -1,0 +1,29 @@
+\contentsline {section}{\numberline {1}Background}{2}{}%
+\contentsline {subsection}{\numberline {1.1}Liquidity Pools}{2}{}%
+\contentsline {subsection}{\numberline {1.2}Gauge Proxy}{3}{}%
+\contentsline {subsection}{\numberline {1.3}Convex and Hidden Hand}{4}{}%
+\contentsline {section}{\numberline {2}The Problem}{4}{}%
+\contentsline {subsection}{\numberline {2.1}Innefficiencies with Existing Systems}{5}{}%
+\contentsline {section}{\numberline {3}Designing a Solution}{6}{}%
+\contentsline {subsection}{\numberline {3.1}Design Assumptions}{6}{}%
+\contentsline {subsection}{\numberline {3.2}Reducing Barriers to entry}{7}{}%
+\contentsline {section}{\numberline {4}ERC-6506}{7}{}%
+\contentsline {subsection}{\numberline {4.1}Ethereum Improvement Proposal}{8}{}%
+\contentsline {subsection}{\numberline {4.2}Modular Design}{9}{}%
+\contentsline {section}{\numberline {5}System Design Specifications}{9}{}%
+\contentsline {subsection}{\numberline {5.1}Transparent vs. Private Incentives}{10}{}%
+\contentsline {subsection}{\numberline {5.2}Private On-Chain Message Passing}{10}{}%
+\contentsline {subsection}{\numberline {5.3}On-Chain Incentives}{11}{}%
+\contentsline {subsection}{\numberline {5.4}Off-Chain Incentives}{11}{}%
+\contentsline {subsection}{\numberline {5.5}Disputes}{12}{}%
+\contentsline {section}{\numberline {6}Modeling the new System}{13}{}%
+\contentsline {subsection}{\numberline {6.1}Flashbots and Miner-Extractable-Value (MEV)}{13}{}%
+\contentsline {subsection}{\numberline {6.2}Supply vs. Demand}{13}{}%
+\contentsline {subsection}{\numberline {6.3}Benefits to token holders}{13}{}%
+\contentsline {section}{\numberline {7}Potential Limitations and Future Work}{14}{}%
+\contentsline {subsection}{\numberline {7.1}Ethical Concerns}{14}{}%
+\contentsline {subsection}{\numberline {7.2}Limitations}{15}{}%
+\contentsline {subsection}{\numberline {7.3}Future Work}{15}{}%
+\contentsline {section}{\numberline {8}Conclusion}{16}{}%
+\contentsline {section}{\numberline {9}Sources}{16}{}%
+\contentsline {section}{\numberline {10}Appendix}{16}{}%

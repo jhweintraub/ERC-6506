@@ -78,7 +78,8 @@ abstract contract PrivateIncentive is IncentiveBase {
                                     incentive.incentiveToken, 
                                     incentive.amount, 
                                     incentive.proposalId,
-                                    incentive.direction));
+                                    incentive.direction,
+                                    incentive.deadline));
 
         smartWallet = Clones.predictDeterministicAddress(TEMPLATE, salt);
     }
